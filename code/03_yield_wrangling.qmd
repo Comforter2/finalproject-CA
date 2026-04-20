@@ -1,0 +1,164 @@
+---
+title: "Yield monitor wrangling for corn, soybeans and cotton"
+author: "Comfort Adegbenro"
+format:
+  html:
+    code-fold: false
+    embed-resources: true
+    toc: true
+    number-sections: true
+    theme: journal
+    #cerulean, journal, quartz, sketchy, slate, morph, superhero, vapor
+knitr: 
+  opts_chunk: 
+    message: false
+    warning: false
+---
+
+# Learning objectives  
+Import yield data for corn, soybeans, and cotton for four different years, do EDA, and then wrangle to get a clean data.
+
+# Setup  
+## Loading packages  
+```{r setup }
+#| message: false
+
+#loading packages (add to the list as we need) 
+library(readr)
+library(janitor)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(sf)
+library(viridis)
+library(mapview)
+
+```
+
+## Importing data  
+```{r yield19 }
+files = list.files("../data/50ac/yield/2016 corn/", 
+                    pattern = "\\.shp$", 
+                    full.names = TRUE) # to import all the file path of each corn yield as a list
+
+y16_corn = lapply(files, read_sf) # this applies the read_sf function to the list of file paths
+
+y16_corn
+
+names(y16_corn) = tools::file_path_sans_ext(basename(files)) #helps to extract and name each source file which is the actual sf object.
+
+lapply(y16_corn, names) #before bindrows(), some of the column names were different, this helped me check which were different and flow/flow_corn, region were identified
+
+y16_corn <- lapply(y16_corn, function(x) {
+  if ("Flow" %in% names(x)) {
+    x <- rename(x, Flow_Corn = Flow)
+  }
+  x
+}) #this helped replace column flow with flow_corn. I'm leaving region until later, so it populates with NA
+
+lapply(y16_corn, names) #check column names again.
+
+y16_corn_all = bind_rows(y16_corn, .id = "source_file") %>%
+  clean_names()
+
+y16_corn_all
+
+```
+
+# EDA  
+```{r summary}
+summary(y16_corn_all) 
+```
+Looking at the distribution of dry yield and speed for corn 2016 
+
+```{r corn 16 yield distribution - density plot}
+ggplot(y16_corn_all, aes(x =dry_yield)) +
+  geom_density() +
+  geom_rug()
+
+```
+
+```{r corn 16 speed distribution - density plot}
+ggplot(y16_corn_all, aes(x = speed))+
+  geom_density()+
+  geom_rug()
+
+```
+
+
+```{r corn 16 yield x speed}
+ggplot(y16_corn_all, aes(x=speed, 
+                    y=dry_yield)) +
+  geom_point() +
+  geom_smooth()
+
+```
+We need to clean the data 
+
+- Clean based on speed  
+- Clean based on yield  
+
+```{r data needs}
+y16_corn_all
+```
+
+From a data wrangling perspective, i will select only needed columns which are dry_yield and speed with the source-filename and geometry
+
+  - speed  
+  - dry_yield  
+  - source_file  
+
+- rename columns to include measurement units  
+- set the crs
+- transform from geographic (unprojected) to projected  
+
+# Wrangling  
+```{r y16_corn_all}
+y16_corn_all_w <- y16_corn_all %>% 
+  
+  # Selecting desired variables and renaming some of them
+  select(speed_mph = speed, 
+         yield_buac = dry_yield,
+         source_file
+         ) %>%
+
+  # Setting native crs (geographic)
+  st_set_crs(value = 4326) %>%
+
+  # Transforming from geodraphic to projected CRS
+   st_transform(crs = 6345)
+
+y16_corn_all_w
+
+summary(y16_corn_all_w)
+
+```
+From the summary and density plots, there seems to outlier for yield as the maximum is above 300, and speed too with maximum reaching 17
+# Maps  
+```{r static}
+y16_corn_all_w %>%
+  ggplot()+
+  geom_sf(aes(color = yield_buac), size = .1)+
+  #coord_sf(datum = st_crs(y16_corn_all_w)) + #lets you plot it in metres for projected crs
+  scale_color_viridis_b()
+
+```
+
+```{r interactive}
+y16_corn_all_w %>%
+  mapview(zcol ="yield_buac",
+          cex = .1,
+          lwd = 0)
+
+```
+
+
+# Exporting  
+```{r}
+write_sf(y16_corn_all_w,
+         "../data/y16corn_processed.geojson",
+         delete_dsn = T)
+
+```
+
+

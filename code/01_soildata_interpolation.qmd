@@ -1,0 +1,290 @@
+---
+title: "Soil p, k, pH"
+author: "All of us"
+format:
+  html:
+    code-fold: false
+    embed-resources: true
+    toc: true
+    number-sections: true
+    theme: journal
+    #cerulean, journal, quartz, sketchy, slate, morph, superhero, vapor
+knitr: 
+  opts_chunk: 
+    message: false
+    warning: false
+---
+
+# Learning Objectives  
+
+Work on Soil P, K and pH data, and interpolate the interpolated map for these variables 
+
+# Setup  
+```{r setup }
+# Packages
+library(dplyr)
+library(tidyr)
+library(janitor)
+library(readr)
+library(sf) #vector manipulation
+library(ggplot2)
+library(viridis)
+library(ggthemes)
+library(gstat) #IDW
+library(stars) #raster manipulation
+library(terra) #topographical variables
+library(patchwork) #combining multiple plots  
+library(tibble) #rownames to column
+library(ggspatial)
+```
+Define map theme for re-use
+```{r defining map theme}
+mytheme_map <- 
+  theme_map()+
+  theme(legend.position = "bottom",
+        legend.direction = "horizontal",
+        panel.background = element_rect(fill="white",
+                                        color=NA),
+        plot.background = element_rect(fill="white",
+                                       color=NA),
+        legend.title = element_text(size=10),
+        legend.text = element_text(size=9),
+        plot.margin = margin(5, 10, 5, 10))
+
+```
+
+```{r reading soil-grid data}
+soil_grid = read_sf("../data/50ac/soilgrid/BackFieldPivot_SampleData_2025-02-12.shp")%>%
+  clean_names()
+
+soil_grid
+summary(soil_grid)
+
+```
+
+- select column needed (id, bufferph, k, p)
+- rename columns to include units if needed
+- set crs
+- transform crs from geometric to projected
+
+# Wrangling  
+```{r grided soil data}
+soil_grid_w = soil_grid %>%
+  select(id, 
+         ph = bufferph,
+         p_lbac = p,
+         k_lbac = k) %>%
+  st_set_crs(value = 4326) %>%
+  st_transform(crs = 6345)
+
+soil_grid_w 
+```
+
+# EDA  
+```{r ph plot}
+soil_grid_w %>%
+  ggplot() +
+  geom_sf(aes(color = ph),
+          size = .5) +
+  scale_color_viridis_b() +
+  mytheme_map
+```
+
+
+```{r P plot}
+soil_grid_w %>%
+  ggplot() +
+  geom_sf(aes(color = p_lbac),
+          size = .5) +
+  scale_color_viridis_b() +
+  mytheme_map
+
+```
+
+
+```{r K plot}
+soil_grid_w %>%
+  ggplot() +
+  geom_sf(aes(color = k_lbac),
+          size = .5) +
+  scale_color_viridis_b() +
+  mytheme_map
+
+```
+
+# Grid  
+Since we are interpolating, we need to create a grid (same as for the yield and terrain exercises) based on the field boundary.    
+
+```{r boundary}
+
+# bring in the field boundary too
+boundary = read_sf("../data/50ac/boundary/BackFieldPivot.shp")%>%
+  clean_names() %>%
+  st_transform(crs = 6345)
+
+boundary
+```
+creating the grid needed for interpolating soil variables
+```{r grid_r}
+# grid in vector format
+grid_r = boundary %>%
+  st_make_grid(cellsize = 5) %>%
+  st_as_sf() %>%
+  st_rasterize(dx = 5,
+               dy = 5) %>%
+  st_crop(boundary)
+
+#grid_r =  grid_r[boundary]
+
+ggplot()+
+  geom_stars(data = grid_r)+
+  mytheme_map
+
+```
+
+# Interpolation
+## soil pH  
+```{r idw_mod}
+ph_idw_mod = gstat(formula = ph ~ 1,
+                      data = soil_grid_w)
+ph_idw_mod
+
+
+plbac_idw_mod = gstat(formula = p_lbac ~ 1,
+                      data = soil_grid_w)
+plbac_idw_mod
+
+
+klbac_idw_mod = gstat(formula = k_lbac ~ 1,
+                      data = soil_grid_w)
+klbac_idw_mod
+```
+
+```{r idw_pred}
+ph_idw_pred  = predict(ph_idw_mod,
+                          grid_r)
+ph_idw_pred
+
+
+plbac_idw_pred  = predict(plbac_idw_mod,
+                          grid_r)
+plbac_idw_pred
+
+
+klbac_idw_pred  = predict(klbac_idw_mod,
+                          grid_r)
+klbac_idw_pred
+```
+```{r ph_map }
+ph_map = ggplot() +
+  geom_stars(data = ph_idw_pred) +
+  scale_fill_viridis_b(na.value = "transparent") +
+  geom_sf(data = boundary, fill = NA) +
+  labs(fill = "Soil pH",
+       title = "Soil pH") +
+  mytheme_map +
+  annotation_scale(location = "bl",
+                   width_hint = 0.3,
+                   pad_x = unit(0.1, "in"),
+                   pad_y = unit(0.01, "in")) +
+  annotation_north_arrow(location = "tl",
+                       pad_x = unit(0.1, "in"),
+                       pad_y = unit(0.05, "in"),
+                       height = unit(0.4, "in"),
+                       width = unit(0.4, "in"),
+                       style = north_arrow_fancy_orienteering())
+
+ph_map
+```
+
+```{r plbac_map }
+plbac_map = ggplot() +
+  geom_stars(data = plbac_idw_pred) +
+  scale_fill_viridis_b(na.value = "transparent") +
+  geom_sf(data = boundary, fill = NA) +
+  labs(fill = "P (lb/ac)",
+        title = "Phosphorus") +
+  mytheme_map
+
+plbac_map
+```
+
+
+
+```{r klbac_map }
+klbac_map = ggplot() +
+  geom_stars(data = klbac_idw_pred) +
+  scale_fill_viridis_b(na.value = "transparent",
+                       breaks = c(150, 200, 250)) +
+  geom_sf(data = boundary, fill = NA) +
+  labs(fill = "K (lb/ac)",
+       title = "Potassium") +
+  mytheme_map
+
+klbac_map
+```
+
+
+## Plotting all together
+```{r plotting all together}
+ph_map + plbac_map + klbac_map +
+  plot_annotation(title = "Interpolated Maps for Soil Varables (50-acre Back Field)",
+    theme = theme(
+      plot.title = element_text(size = 13, face = "bold", hjust = 0.5)))
+
+ggsave("../output/soilph-p-k.png", 
+       width = 12, 
+       height = 6)
+```
+
+# Grid extraction  
+```{r eca30_v}
+eca30_v = eca30_idw_pred %>%
+  st_as_sf(as_points = F,
+           merge = F) %>%
+  dplyr::select(eca30_dsm = var1.pred)
+
+eca30_v
+```
+
+
+```{r eca90_v}
+eca90_v <- eca90_idw_pred %>%
+  st_as_sf(as_points = F, 
+           merge = F) %>%
+  dplyr::select(eca90_dsm=var1.pred) 
+
+eca90_v
+```
+
+# Merging eca layers  
+```{r eca_v }
+eca_v = eca30_v %>%
+  st_join(eca90_v,
+          join = st_equals,
+          left = T)
+
+eca_v
+```
+
+# Exporting  
+Exporting to file to use later for management zone creation.  
+```{r exporting}
+write_sf(eca_v,
+         "../data/eca_v.geojson",
+         delete_dsn = T)
+
+```
+
+# Summary  
+Today we have:  
+- Imported point vector soil ECa data  
+- Interpolated soil ECa at two different depths to same grid as used for yield (keeping them all on same spatial extent and resolution)  
+- Transformed them into vector, joined both depths in one object, and exported to file  
+
+# What's next?  
+Next we will be ready to create and validate management zones!
+
+For that, we will first load all layers created until now together.
+
+Then, we will use a clustering algorithm to create zones, and will validate them. 

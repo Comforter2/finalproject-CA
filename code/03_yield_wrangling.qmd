@@ -32,11 +32,12 @@ library(ggplot2)
 library(sf)
 library(viridis)
 library(mapview)
-
+library(patchwork)
+library(gt)
 ```
 
 ## Importing data  
-```{r yield19 }
+```{r y16 corn }
 files = list.files("../data/50ac/yield/2016 corn/", 
                     pattern = "\\.shp$", 
                     full.names = TRUE) # to import all the file path of each corn yield as a list
@@ -65,10 +66,46 @@ y16_corn_all
 
 ```
 
+
+```{r y17_soybeans}
+
+y17_soybeans = read_sf("../data/50ac/yield/2017 soybeans/2017_50_acre_soybean.shp") %>%
+  clean_names()
+y17_soybeans
+
+```
+
+```{r y23/24_cotton}
+
+y23_cotton = read_sf("../data/50ac/yield/2023 cotton/50_acre_2023.shp") %>%
+  clean_names()
+y23_cotton
+
+
+y24_cotton = read_sf("../data/50ac/yield/2024 cotton/2024_50acre.shp") %>%
+  clean_names()
+y24_cotton
+
+
+```
+
 # EDA  
-```{r summary}
+```{r summary y16_corn_all}
 summary(y16_corn_all) 
 ```
+
+
+```{r summary y17_soybeans}
+summary(y17_soybeans) 
+```
+
+
+```{r summary y23/24_cotton}
+summary(y23_cotton) 
+
+summary(y24_cotton) 
+```
+
 Looking at the distribution of dry yield and speed for corn 2016 
 
 ```{r corn 16 yield distribution - density plot}
@@ -78,8 +115,51 @@ ggplot(y16_corn_all, aes(x =dry_yield)) +
 
 ```
 
+
 ```{r corn 16 speed distribution - density plot}
 ggplot(y16_corn_all, aes(x = speed))+
+  geom_density()+
+  geom_rug()
+
+```
+
+
+Looking at the distribution of dry yield and speed for soybean 2017 
+
+```{r soybeans 17 yield distribution - density plot}
+ggplot(y17_soybeans, aes(x =dry_yield)) +
+  geom_density() +
+  geom_rug()
+
+```
+
+```{r soybeans 17 speed distribution - density plot}
+ggplot(y17_soybeans, aes(x = speed))+
+  geom_density()+
+  geom_rug()
+
+```
+
+Looking at the distribution of dry yield and speed for cotton 2023 and 2024 
+
+```{r cotton 23_24 yield distribution - density plot}
+ggplot(y23_cotton, aes(x =dry_yield)) +
+  geom_density() +
+  geom_rug()
+
+
+ggplot(y24_cotton, aes(x =dry_yield)) +
+  geom_density() +
+  geom_rug()
+```
+
+
+```{r cotton 23_24 speed distribution - density plot}
+ggplot(y23_cotton, aes(x = speed))+
+  geom_density()+
+  geom_rug()
+
+ggplot(y24_cotton, aes(x = speed))+
   geom_density()+
   geom_rug()
 
@@ -93,6 +173,31 @@ ggplot(y16_corn_all, aes(x=speed,
   geom_smooth()
 
 ```
+
+
+```{r soybeans 17 yield x speed}
+ggplot(y17_soybeans, aes(x=speed, 
+                    y=dry_yield)) +
+  geom_point() +
+  geom_smooth()
+
+```
+
+
+```{r cotton 23_24 yield x speed}
+ggplot(y23_cotton, aes(x=speed, 
+                    y=dry_yield)) +
+  geom_point() +
+  geom_smooth()
+
+
+ggplot(y24_cotton, aes(x=speed, 
+                    y=dry_yield)) +
+  geom_point() +
+  geom_smooth()
+
+```
+
 We need to clean the data 
 
 - Clean based on speed  
@@ -100,13 +205,20 @@ We need to clean the data
 
 ```{r data needs}
 y16_corn_all
+
+y17_soybeans
+
+y23_cotton
+
+y24_cotton
 ```
 
-From a data wrangling perspective, i will select only needed columns which are dry_yield and speed with the source-filename and geometry
+From a data wrangling perspective, i will select only needed columns which are dry_yield, speed and elevation, with the source-filename (for corn) and geometry
 
   - speed  
   - dry_yield  
-  - source_file  
+  - elevation
+  - source_file  (for corn)
 
 - rename columns to include measurement units  
 - set the crs
@@ -117,9 +229,10 @@ From a data wrangling perspective, i will select only needed columns which are d
 y16_corn_all_w <- y16_corn_all %>% 
   
   # Selecting desired variables and renaming some of them
-  select(speed_mph = speed, 
+  select(source_file,
+         speed_mph = speed, 
          yield_buac = dry_yield,
-         source_file
+         elev_ft = elevation
          ) %>%
 
   # Setting native crs (geographic)
@@ -133,16 +246,125 @@ y16_corn_all_w
 summary(y16_corn_all_w)
 
 ```
-From the summary and density plots, there seems to outlier for yield as the maximum is above 300, and speed too with maximum reaching 17
+
+From the summary and density plots, there seems to outlier for corn yield as the maximum is above 300, and speed too with maximum reaching 17
+
+
+```{r y17_soybeans}
+y17_soybeans_w <- y17_soybeans %>% 
+  
+  # Selecting desired variables and renaming some of them
+  select(speed_mph = speed, 
+         yield_buac = dry_yield,
+         elev_ft = elevation
+         ) %>%
+
+  # Setting native crs (geographic)
+  st_set_crs(value = 4326) %>%
+
+  # Transforming from geodraphic to projected CRS
+   st_transform(crs = 6345)
+
+y17_soybeans_w
+
+summary(y17_soybeans_w)
+
+```
+
+There seem to be outliers for the 2017 soybean yield (274 bu/ac), and a speed of 12.1 mph, seem far away from the median of 3.8 mph.
+
+
+
+```{r y23_cotton}
+y23_cotton_w <- y23_cotton %>% 
+  
+  # Selecting desired variables and renaming some of them
+  select(speed_mph = speed, 
+         yield_lbac = dry_yield,
+         elev_ft = elevation
+         ) %>%
+
+  # Setting native crs (geographic)
+  st_set_crs(value = 4326) %>%
+
+  # Transforming from geodraphic to projected CRS
+   st_transform(crs = 6345)
+
+y23_cotton_w
+
+summary(y23_cotton_w)
+
+```
+
+There is an outlier in cotton 2023 yield (46143 lb/ac)
+
+
+
+```{r y24_cotton}
+y24_cotton_w <- y24_cotton %>% 
+  
+  # Selecting desired variables and renaming some of them
+  select(speed_mph = speed, 
+         yield_lbac = dry_yield,
+         elev_ft = elevation
+         ) %>%
+
+  # Setting native crs (geographic)
+  st_set_crs(value = 4326) %>%
+
+  # Transforming from geodraphic to projected CRS
+   st_transform(crs = 6345)
+
+y24_cotton_w
+
+summary(y24_cotton_w)
+
+```
+
+
 # Maps  
-```{r static}
+```{r static map for 2016 corn}
 y16_corn_all_w %>%
+  filter(yield_buac < 300) %>%
   ggplot()+
   geom_sf(aes(color = yield_buac), size = .1)+
   #coord_sf(datum = st_crs(y16_corn_all_w)) + #lets you plot it in metres for projected crs
   scale_color_viridis_b()
 
 ```
+
+```{r static map for 2017 soybeans}
+y17_soybeans_w %>%
+  filter(yield_buac < 50) %>%
+  ggplot()+
+  geom_sf(aes(color = yield_buac), size = .1)+
+  #coord_sf(datum = st_crs(y17_soybeans_w)) + #lets you plot it in metres for projected crs
+  scale_color_viridis_b()
+
+```
+
+
+
+```{r static map for 2023 cotton}
+y23_cotton_w %>%
+  filter(yield_lbac < 5000) %>%
+  ggplot()+
+  geom_sf(aes(color = yield_lbac), size = .1)+
+  #coord_sf(datum = st_crs(y23_cotton_w)) + #lets you plot it in metres for projected crs
+  scale_color_viridis_b()
+
+```
+
+```{r static map for 2024 cotton}
+y23_cotton_w %>%
+  filter(yield_lbac < 5000) %>%
+  ggplot()+
+  geom_sf(aes(color = yield_lbac), size = .1)+
+  #coord_sf(datum = st_crs(y24_cotton_w)) + #lets you plot it in metres for projected crs
+  scale_color_viridis_b()
+
+```
+
 
 ```{r interactive}
 y16_corn_all_w %>%
@@ -154,11 +376,180 @@ y16_corn_all_w %>%
 
 
 # Exporting  
-```{r}
+```{r exporting wrangled y16 corn}
 write_sf(y16_corn_all_w,
          "../data/y16corn_processed.geojson",
          delete_dsn = T)
 
 ```
 
+
+```{r exporting wrangled y17 soybeans}
+write_sf(y17_soybeans_w,
+         "../data/y17soybeans_processed.geojson",
+         delete_dsn = T)
+
+```
+
+
+```{r exporting wrangled y23 cotton}
+write_sf(y23_cotton_w,
+         "../data/y23cotton_processed.geojson",
+         delete_dsn = T)
+
+```
+
+
+```{r exporting wrangled y24 cotton}
+write_sf(y24_cotton_w,
+         "../data/y24cotton_processed.geojson",
+         delete_dsn = T)
+
+```
+
+
+# Creating Summaries
+```{r summary data y16 corn}
+summary_raw_y16_corn = y16_corn_all_w %>%
+  st_drop_geometry() %>%
+  summarise(Observations = length(yield_buac),
+            Min = min(yield_buac),
+            Mean = mean(yield_buac),
+            Max = max(yield_buac),
+            Std_Dev = sd(yield_buac)
+            ) %>%
+  mutate(Data = "Raw",
+         Crop = "Corn",
+         Year = 2016) %>%
+  dplyr::select(Data, Year, Crop, everything())
+
+summary_raw_y16_corn
+```
+
+```{r summary data y17 soybeans}
+summary_raw_y17_soybeans = y17_soybeans_w %>%
+  st_drop_geometry() %>%
+  summarise(Observations = length(yield_buac),
+            Min = min(yield_buac),
+            Mean = mean(yield_buac),
+            Max = max(yield_buac),
+            Std_Dev = sd(yield_buac)
+            ) %>%
+  mutate(Data = "Raw",
+         Crop = "Soybeans",
+         Year = 2017) %>%
+  dplyr::select(Data, Year, Crop, everything())
+
+summary_raw_y17_soybeans
+```
+
+```{r summary data y23 cotton}
+summary_raw_y23_cotton = y23_cotton_w %>%
+  st_drop_geometry() %>%
+  summarise(Observations = length(yield_lbac),
+            Min = min(yield_lbac, na.rm = TRUE),
+            Mean = mean(yield_lbac, na.rm = TRUE),
+            Max = max(yield_lbac, na.rm = TRUE),
+            Std_Dev = sd(yield_lbac, na.rm = TRUE)
+            ) %>%
+  mutate(Data = "Raw",
+         Crop = "Cotton",
+         Year = 2023) %>%
+  dplyr::select(Data, Year, Crop, everything())
+
+summary_raw_y23_cotton
+```
+
+```{r summary data y24 cotton}
+summary_raw_y24_cotton = y24_cotton_w %>%
+  st_drop_geometry() %>%
+  summarise(Observations = length(yield_lbac),
+            Min = min(yield_lbac, na.rm = TRUE),
+            Mean = mean(yield_lbac, na.rm = TRUE),
+            Max = max(yield_lbac, na.rm = TRUE),
+            Std_Dev = sd(yield_lbac, na.rm = TRUE)
+            ) %>%
+  mutate(Data = "Raw",
+         Crop = "Cotton",
+         Year = 2024) %>%
+  dplyr::select(Data, Year, Crop, everything())
+
+summary_raw_y24_cotton
+```
+
+
+```{r combine all yield summaries}
+all_ys = summary_raw_y16_corn %>%
+  bind_rows(summary_raw_y17_soybeans) %>%
+  bind_rows(summary_raw_y23_cotton) %>%
+  bind_rows(summary_raw_y24_cotton)
+  
+all_ys
+
+all_ys_table = all_ys %>%
+  gt() %>%
+  tab_header(title = "Yield Summary: Corn, Soybeans and Cotton") %>%
+  fmt_number(columns = c(Mean, Std_Dev, Min, Max), decimals = 1) %>%
+  fmt_number(columns = Observations, decimals = 0, use_seps = TRUE) %>%
+  tab_source_note(source_note = "Yield units: bu/ac for corn and soybean, and lb/ac for cotton") %>%
+  tab_options(
+    table.width = pct(90),
+    table.font.size = 14,
+    data_row.padding = px(8),
+    column_labels.font.weight = "bold",
+    heading.title.font.size = 18,
+    heading.title.font.weight = "bold"
+  )
+
+all_ys_table
+
+# Saving to load it in another script
+saveRDS(all_ys_table, "../output/all_ys_table.rds")
+```
+
+
+
+# Creating Density Plots
+```{r corn 16 yield distribution - density plot}
+dplot_y16 = ggplot(y16_corn_all_w, aes(x =yield_buac)) +
+  geom_density(fill = "#558B2F",
+               color = "black",
+               alpha = 0.6,
+               linewidth = 0.5) +
+  geom_rug(alpha = 0.3) +
+  labs(x = " 2016 Corn Yield (bu/ac)",
+       y = "Density") +
+  theme_classic(base_size = 12)
+
+dplot_y16
+```
+
+
+
+```{r soybeans 17 yield distribution - density plot}
+dplot_y17 = ggplot(y17_soybeans_w, aes(x =yield_buac)) +
+  geom_density(fill = "#B8860B",
+               color = "black",
+               alpha = 0.6,
+               linewidth = 0.5) +
+  geom_rug(alpha = 0.3) +
+  labs(x = " 2017 Soybeans Yield (bu/ac)",
+       y = "Density") +
+  theme_classic(base_size = 12)
+
+dplot_y17
+
+```
+
+```{r combine all density plots}
+dplot_y16 + dplot_y17 + dplot_y16 + dplot_y17 +
+  plot_annotation(title = "Yield Distribution",
+                  theme = theme(
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5))) 
+
+
+ggsave("../output/yield_densitiy_plots.png", 
+       width = 10, 
+       height = 6)
+```
 

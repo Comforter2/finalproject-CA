@@ -238,53 +238,53 @@ ggsave("../output/soilph-p-k.png",
 ```
 
 # Grid extraction  
-```{r eca30_v}
-eca30_v = eca30_idw_pred %>%
+```{r soil_ph_v}
+ph_v = ph_idw_pred %>%
   st_as_sf(as_points = F,
            merge = F) %>%
-  dplyr::select(eca30_dsm = var1.pred)
+  dplyr::select(ph = var1.pred)
 
-eca30_v
+ph_v
 ```
 
 
-```{r eca90_v}
-eca90_v <- eca90_idw_pred %>%
+```{r plbac_v}
+plbac_v <- plbac_idw_pred %>%
   st_as_sf(as_points = F, 
            merge = F) %>%
-  dplyr::select(eca90_dsm=var1.pred) 
+  dplyr::select(p_lbac=var1.pred) 
 
-eca90_v
+plbac_v
 ```
 
-# Merging eca layers  
-```{r eca_v }
-eca_v = eca30_v %>%
-  st_join(eca90_v,
+
+```{r klbac_v}
+klbac_v <- klbac_idw_pred %>%
+  st_as_sf(as_points = F, 
+           merge = F) %>%
+  dplyr::select(k_lbac=var1.pred) 
+
+klbac_v
+```
+
+# Merging soil pH, P and K layers  
+```{r soil_v }
+soil_v = ph_v %>%
+  st_join(plbac_v,
+          join = st_equals,
+          left = T) %>%
+  st_join(klbac_v,
           join = st_equals,
           left = T)
 
-eca_v
+soil_v
 ```
 
 # Exporting  
 Exporting to file to use later for management zone creation.  
-```{r exporting}
-write_sf(eca_v,
-         "../data/eca_v.geojson",
+```{r exporting soil_v}
+write_sf(soil_v,
+         "../data/soil_v.geojson",
          delete_dsn = T)
 
 ```
-
-# Summary  
-Today we have:  
-- Imported point vector soil ECa data  
-- Interpolated soil ECa at two different depths to same grid as used for yield (keeping them all on same spatial extent and resolution)  
-- Transformed them into vector, joined both depths in one object, and exported to file  
-
-# What's next?  
-Next we will be ready to create and validate management zones!
-
-For that, we will first load all layers created until now together.
-
-Then, we will use a clustering algorithm to create zones, and will validate them. 

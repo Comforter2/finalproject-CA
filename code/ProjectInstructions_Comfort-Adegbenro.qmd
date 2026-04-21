@@ -74,7 +74,12 @@ As a suggestion, you could follow these steps:
 
 - Launch RStudio.   
 
-- Create a New Project, and have it created at the level of your `finalproject-INITIALS` folder.  
+- Create a New Project, and have it created at the level of your `finalproject-INITIALS` folder. 
+
+```{r load libraries}
+library()
+```
+
 
 ## Workflow  
 You are required to follow a similar workflow from what we did in class:  
@@ -169,8 +174,13 @@ Once you get started and as you progress in the project tasks, Mr. McCormick is 
 ## 1. Show a map of the interpolated soil gridded variables of P, K, and pH. Provide an interpretation. On your color legend, use the color brakes according to sufficiency levels for corn.  
 ![](../output/soilph-p-k.png)
 
-## 2. What is the number of observations, minimum, mean, maximum, and standard deviation for the **raw** yield data (in bu/ac)? Show Mr. McCormick a plot with the density distribution of the **raw** yield data for each year available.  
+## 2. What is the number of observations, minimum, mean, maximum, and standard deviation for the **raw** yield data (in bu/ac)? Show Mr. McCormick a plot with the density distribution of the **raw** yield data for each year available. 
 
+```{r}
+read_rds("../output/all_ys_table.rds")
+```
+
+![](../output/yield_densitiy_plots.png)
 
 ## 3. How many meters of negative buffer did you use for this field? Was that enough to remove low yielding data points near the field border? Show Mr. McCormick a map with the field border, points colored by raw yield data from one of the years, and the buffer outline. 
 

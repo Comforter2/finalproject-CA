@@ -462,6 +462,10 @@ ymap16_corn_raw +
           fill = NA,
           linewidth = 1,
           color = "orange")
+
+ggsave("../output/raw_corn_ymap_buffer.png",
+       width = 6,
+       height = 4)
 ```
 
 ## Filtering position
@@ -611,20 +615,80 @@ saveRDS(all_ys_clean_table, "../output/all_ys_clean_table.rds")
 
 
 ## Density plot
+```{r corn 16 yield distribution - density plot}
+dplot_y16 = ggplot(y16_corn_bf, aes(x =yield_buac)) +
+  geom_density(fill = "#558B2F",
+               color = "black",
+               alpha = 0.6,
+               linewidth = 0.5) +
+  geom_rug(alpha = 0.3) +
+  labs(x = " 2016 Corn Yield (bu/ac)",
+       y = "Density") +
+  theme_classic(base_size = 12)
 
-```{r}
-ggplot()+
-  geom_density(data = yield20_w, 
-               aes(x = yield_lbac), 
-               fill = "blue", 
-               alpha = .5) +
-  geom_density(data = yield20_w_pf, 
-               aes(x = yield_lbac), 
-               fill = "yellow", 
-               alpha = .5)
+dplot_y16
 ```
 
-The density shifted from the bottom left to the peak where mean is.
+
+
+```{r soybeans 17 yield distribution - density plot}
+dplot_y17 = ggplot(y17_soy_bf, aes(x =yield_buac)) +
+  geom_density(fill = "#B8860B",
+               color = "black",
+               alpha = 0.6,
+               linewidth = 0.5) +
+  geom_rug(alpha = 0.3) +
+  labs(x = " 2017 Soybeans Yield (bu/ac)",
+       y = "Density") +
+  theme_classic(base_size = 12)
+
+dplot_y17
+
+```
+
+
+```{r cotton 23 yield distribution - density plot}
+dplot_y23 = ggplot(y23_cot_bf, aes(x =yield_lbac)) +
+  geom_density(fill = "#6BAED6",
+               color = "black",
+               alpha = 0.6,
+               linewidth = 0.5) +
+  geom_rug(alpha = 0.3) +
+  labs(x = " 2023 Cotton Yield (lb/ac)",
+       y = "Density") +
+  theme_classic(base_size = 12)
+
+dplot_y23
+
+```
+
+```{r cotton 24 yield distribution - density plot}
+dplot_y24 = ggplot(y24_cot_bf, aes(x =yield_lbac)) +
+  geom_density(fill = "#08519C",
+               color = "black",
+               alpha = 1,
+               linewidth = 0.5) +
+  geom_rug(alpha = 0.3) +
+  labs(x = " 2024 Cotton Yield (lb/ac)",
+       y = "Density") +
+  theme_classic(base_size = 12)
+
+dplot_y24
+
+```
+
+
+```{r combine all density plots}
+dplot_y16 + dplot_y17 + dplot_y23 + dplot_y24 +
+  plot_annotation(title = "Yield Distribution from Clean Data",
+                  theme = theme(
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5))) 
+
+
+ggsave("../output/cleanyield_densitiy_plots.png", 
+       width = 10, 
+       height = 6)
+```
 
 # Maps
 

@@ -178,22 +178,31 @@ For soil pH the entire field is Above Optimal (> 6.5) based on the UGA recommend
 ## 2. What is the number of observations, minimum, mean, maximum, and standard deviation for the **raw** yield data (in bu/ac)? Show Mr. McCormick a plot with the density distribution of the **raw** yield data for each year available. 
 
 ```{r}
-read_rds("../output/all_ys_table.rds")
+read_rds("../output/all_ys_raw_table.rds")
 ```
 The raw yield data shows clear outliers across most years. Corn (2016), soybeans (2017), and cotton (2023) all have minimums at or near zero and extreme maximum values. For example, 872 bu/ac for corn, 274 bu/ac for soybean (compared to mean), and 46,144 lb/ac for cotton in 2023 which are unrealistic.
 
-![](../output/yield_densitiy_plots.png)
+![](../output/rawyield_densitiy_plots.png)
 
 The density plots confirm the raw data summary from the table above, showing tight peaks at realistic yields with long tails stretching far to the right. The 2024 cotton data is the cleanest, with a smooth bell-shaped distribution and an almost reasonable maximum of approximately 4,950 lb/ac. Overall, the raw data needs filtering before meaningful analysis and drawing proper conclusions.
 
 
 ## 3. How many meters of negative buffer did you use for this field? Was that enough to remove low yielding data points near the field border? Show Mr. McCormick a map with the field border, points colored by raw yield data from one of the years, and the buffer outline. 
 
+![](../output/raw_corn_ymap_buffer.png)
 
 ## 4. What is the number of observations, minimum, mean, maximum, and standard deviation for the **cleaned** yield data (in bu/ac)? Show Mr. McCormick a plot with the density distribution of the **cleaned** yield data for each year.  
 
+```{r}
+read_rds("../output/all_ys_clean_table.rds")
+```
+
+
+![](../output/cleanyield_densitiy_plots.png)
 
 ## 5. When creating a grid for interpolation, what grid cell size did you use? Why did you select this size?  
+
+5m
 
 ## 6. Show Mr. McCormick a map of the cleaned interpolated yield data for each year (include the field boundary).  
 

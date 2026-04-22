@@ -75,8 +75,6 @@ y24_cotton_w = read_sf("../data/y24cotton_processed.geojson")
 y24_cotton_w
 
 boundary = read_sf("../data/50ac/boundary/BackFieldPivot.shp") %>%
-  clean_names() %>%
-  st_set_crs(4326) %>%
   st_transform(crs = 6345)
 
 boundary
@@ -96,13 +94,13 @@ summary(y24_cotton_w)
 ## Raw map
 
 ```{r raw maps for corn}
-ymap16_corn =  y16_corn_w %>%
+ymap16_corn_raw =  y16_corn_w %>%
   filter(yield_buac < 300) %>%
   ggplot()+
   geom_sf(aes(color = yield_buac),
           size = 0.3) +
   scale_color_viridis_b() +
-  geom_sf(data = boundary, fill = NA) +
+  #geom_sf(data = boundary, fill = NA) +
   labs(color = "Corn yield (bu/acre)",
        title = "Map of Corn Raw Yield Data (outlier of >300 bu/ac excluded)") +
   mytheme_map +
@@ -116,7 +114,7 @@ ymap16_corn =  y16_corn_w %>%
                        height = unit(0.4, "in"),
                        width = unit(0.4, "in"),
                        style = north_arrow_fancy_orienteering())
-ymap16_corn
+ymap16_corn_raw
 ```
 
 # Yield editor - Min/max yield
@@ -139,7 +137,6 @@ miny16_corn
 maxy16_corn = upq_y16_corn + (0.25*iqr_y16_corn)
 maxy16_corn
 ```
-
 
 
 ```{r raw yield quantile soybean 2017}
@@ -265,75 +262,116 @@ y24_cot_yf
 Before filtering we had a total of 15,264 rows. How many rows now after filtering? **14,555** rows
 
 
-
-
 ## Min/max yield cleaned summary
 
-```{r}
-summary(yield20_w_yf$yield_lbac)
+```{r using cotton 2023 as example}
+summary(y23_cot_yf$yield_lbac)
 ```
 
-All right, all done filtering based on yield min and max. Now let’s do the same for speed.
+Now filter based on speed.
 
 # Yield editor - Min/max speed
 
-## Raw speed distribution
-
-```{r}
-ggplot(data = yield20_w, 
-       aes(x = speed_mph))+
-  geom_density()+
-  geom_rug()
-```
-
-## Raw speed summary
-
-```{r}
-summary(yield20_w$speed_mph) 
-```
-
 ## Raw speed quantiles
 
-```{r}
-lowq_speed = quantile(yield20_w$speed_mph, 0.08)
-lowq_speed
+```{r raw speed quantile corn 2016}
+lowq_s16_corn  = quantile(y16_corn_w$speed_mph, 0.08)
+lowq_s16_corn
 
-upq_speed = quantile(yield20_w$speed_mph, 0.99)
-upq_speed
+upq_s16_corn = quantile (y16_corn_w$speed_mph, 0.99)
+upq_s16_corn
 
-iqr <- upq_speed - lowq_speed
-iqr
+iqr_s16_corn = upq_s16_corn - lowq_s16_corn
+iqr_s16_corn
 
-minv <- lowq_speed - (0.18*iqr)
-minv
+minv16_corn = lowq_s16_corn - (0.18*iqr_s16_corn)
+minv16_corn
 
-maxv <- upq_speed + (0.18*iqr)
-maxv
+maxv16_corn = upq_s16_corn + (0.18*iqr_s16_corn)
+maxv16_corn
 ```
+
+
+```{r raw speed quantile soybean 2017}
+lowq_s17_soy  = quantile(y17_soybeans_w$speed_mph, 0.08)
+lowq_s17_soy
+
+upq_s17_soy = quantile (y17_soybeans_w$speed_mph, 0.99)
+upq_s17_soy
+
+iqr_s17_soy = upq_s17_soy - lowq_s17_soy
+iqr_s17_soy
+
+minv17_soy = lowq_s17_soy - (0.18*iqr_s17_soy)
+minv17_soy
+
+maxv17_soy = upq_s17_soy + (0.18*iqr_s17_soy)
+maxv17_soy
+```
+
+```{r raw speed quantile cotton 2023}
+lowq_s23_cot  = quantile(y23_cotton_w$speed_mph, 0.08,
+                         na.rm = TRUE)
+lowq_s23_cot
+
+upq_s23_cot = quantile (y23_cotton_w$speed_mph, 0.99,
+                        na.rm = TRUE)
+upq_s23_cot
+
+iqr_s23_cot = upq_s23_cot - lowq_s23_cot
+iqr_s23_cot
+
+minv23_cot = lowq_s23_cot - (0.18*iqr_s23_cot)
+minv23_cot
+
+maxv23_cot = upq_s23_cot + (0.18*iqr_s23_cot)
+maxv23_cot
+```
+
+
+```{r raw speed quantile cotton 2024}
+lowq_s24_cot  = quantile(y24_cotton_w$speed_mph, 0.08,
+                         na.rm = TRUE)
+lowq_s24_cot
+
+upq_s24_cot = quantile (y24_cotton_w$speed_mph, 0.99,
+                        na.rm = TRUE)
+upq_s24_cot
+
+iqr_s24_cot = upq_s24_cot - lowq_s24_cot
+iqr_s24_cot
+
+minv24_cot = lowq_s24_cot - (0.18*iqr_s24_cot)
+minv24_cot
+
+maxv24_cot = upq_s24_cot + (0.18*iqr_s24_cot)
+maxv24_cot
+```
+
 
 ## Min/max raw speed quantiles plot
 
-```{r}
+```{r using cotton 2023 as example}
 ggplot()+
-  geom_density(data = yield20_w, 
+  geom_density(data = y23_cotton_w, 
                aes(x = speed_mph))+
-  geom_vline(xintercept = lowq_speed, 
+  geom_vline(xintercept = lowq_s23_cot, 
              color = "red", 
              linetype = 2)+
-  geom_vline(xintercept = upq_speed, 
+  geom_vline(xintercept = upq_s23_cot, 
              color = "blue", 
              linetype = 2)+
-  geom_vline(xintercept = minv, 
+  geom_vline(xintercept = minv23_cot, 
              color = "red", 
              linetype =1)+
-  geom_vline(xintercept = maxv, 
+  geom_vline(xintercept = maxv23_cot, 
              color = "blue", 
              linetype = 1)+
   annotate(geom = "rect",
            ymin = 0, 
            ymax = Inf,
-           xmin = minv, 
-           xmax = maxv,
+           xmin = minv23_cot, 
+           xmax = maxv23_cot,
            alpha = .3, 
            fill = "orange")
 
@@ -348,54 +386,74 @@ yield20_w_sf = yield20_w_yf %>%
 yield20_w_sf
 ```
 
+
+```{r y16_corn s-filtered}
+y16_corn_sf = y16_corn_yf %>%
+  filter(speed_mph > minv16_corn & speed_mph < maxv16_corn)
+
+y16_corn_sf
+```
+
+Before filtering we had a total of 22,271 rows. How many rows now after filtering? **22,003** rows
+
+```{r y17_soy s-filtered}
+y17_soy_sf = y17_soy_yf %>%
+  filter(speed_mph > minv17_soy & speed_mph < maxv17_soy)
+
+y17_soy_sf
+```
+
+Before filtering we had a total of 14,023  rows. How many rows now after filtering? **13,673** rows
+
+```{r y23_cot s-filtered}
+y23_cot_sf = y23_cot_yf %>%
+  filter(speed_mph > minv23_cot & speed_mph < maxv23_cot)
+
+y23_cot_sf
+```
+
+Before filtering we had a total of 13,633 rows. How many rows now after filtering? **13,220** rows
+
+```{r y24_cot s-filtered}
+y24_cot_sf = y24_cot_yf %>%
+  filter(speed_mph > minv24_cot & speed_mph < maxv24_cot)
+
+y24_cot_sf
+```
+
+Before filtering we had a total of 14,555 rows. How many rows now after filtering? **14,414** rows
+
 ## Min/max speed cleaned summary
 
-```{r}
-summary(yield20_w_sf$speed_mph)
+```{r cotton 23 as example}
+summary(y23_cot_sf$speed_mph)
 ```
 
 # Yield editor - Position
 
-Original position filter was based on quantiles too. Why filter based on boundary?
-
-## Field boundary
-
-```{r}
-boundary = read_sf("../../05-digitizing/ouput/boundary.geojson")
-
-boundary
-```
-
-```{r}
-boundary_w = boundary %>%
-  st_transform(6345)
-  
-boundary_w
-```
-
 ## Field boundary plot
 
-```{r}
-yieldmap_raw +
-  geom_sf(data = boundary_w,
+```{r ymap corn 16 with boundary}
+ymap16_corn_raw +
+  geom_sf(data = boundary,
           fill = NA,
           linewidth = 1)
 ```
 
-Let’s create a negative buffer of 20 m.
+Creating a negative buffer of 20 m.
 
 ## Buffer
 
 ```{r}
-buffer = boundary_w %>%
-  st_buffer(dist = -20) #the unit of whatever is your CRS
+buffer = boundary %>%
+  st_buffer(dist = -20) #the unit of CRS
 
 buffer
 ```
 
 ```{r}
-yieldmap_raw + 
-  geom_sf(data=boundary_w, 
+ymap16_corn_raw + 
+  geom_sf(data=boundary, 
           fill = NA,
           linewidth = 1,
           color = "black") +
@@ -407,76 +465,149 @@ yieldmap_raw +
 
 ## Filtering position
 
-```{r}
-yield20_w_pf = yield20_w_sf %>%
+```{r y16_corn buffer filtered}
+y16_corn_bf = y16_corn_sf %>%
   st_intersection(buffer)
 
-yield20_w_pf
+y16_corn_bf
+```
+
+
+```{r y17_soy buffer filtered}
+y17_soy_bf = y17_soy_sf %>%
+  st_intersection(buffer)
+
+y17_soy_bf
+```
+
+
+```{r y23_cot buffer filtered}
+y23_cot_bf = y23_cot_sf %>%
+  st_intersection(buffer)
+
+y23_cot_bf
+```
+
+
+```{r y24_cot buffer filtered}
+y24_cot_bf = y24_cot_sf %>%
+  st_intersection(buffer)
+
+y24_cot_bf
 ```
 
 ## Position yield cleaned summary
 
 ```{r}
-summary(yield20_w_pf$yield_lbac)
+summary(y23_cot_bf$yield_lbac)
 ```
 
-# Raw vs Cleaned data
+# Cleaned data
 
 ## Summary statistics
 
-### Raw yield summary
-
-```{r}
-summary_raw = yield20_w %>%
-  summarise(n = length(yield_lbac),
-            min = min(yield_lbac),
-            mean = mean(yield_lbac),
-            max = max(yield_lbac),
-            sd = sd(yield_lbac),
-            cv = (sd/mean)*100
-            ) %>%
-  mutate(data = "raw") %>%
-  dplyr::select(data, everything())
-
-
-summary_raw
-```
-
 ### Clean yield summary
 
-```{r}
-summary_filtered <- yield20_w_pf %>%
-  summarise(n = length(yield_lbac),
-            min = min(yield_lbac),
-            mean = mean(yield_lbac),
-            max = max(yield_lbac),
-            sd = sd(yield_lbac),
-            cv = (sd/mean)*100
-            ) %>%
-  mutate(data = "clean") %>%
-  dplyr::select(data, everything())
-
-summary_filtered
-
-clean_yield20_summary = summary_filtered %>%
+# Creating Summaries
+```{r summary data y16 corn}
+summary_raw_y16_corn = y16_corn_all_w %>%
   st_drop_geometry() %>%
-  select(-data, -n) %>%
-  pivot_longer(cols = everything(),
-               names_to = "Variable", 
-               values_to = "Value") %>%
-  mutate(Value = round(Value, 2))
+  summarise(Observations = length(yield_buac),
+            Min = min(yield_buac),
+            Mean = mean(yield_buac),
+            Max = max(yield_buac),
+            Std_Dev = sd(yield_buac)
+            ) %>%
+  mutate(Data = "Raw",
+         Crop = "Corn",
+         Year = 2016) %>%
+  dplyr::select(Data, Year, Crop, everything())
 
-write_csv(clean_yield20_summary, "../ouput/clean_yield20_summary.csv")
-
-read_csv("../ouput/clean_yield20_summary.csv")
+summary_raw_y16_corn
 ```
 
-### Combined yield summary
+```{r summary data y17 soybeans}
+summary_raw_y17_soybeans = y17_soybeans_w %>%
+  st_drop_geometry() %>%
+  summarise(Observations = length(yield_buac),
+            Min = min(yield_buac),
+            Mean = mean(yield_buac),
+            Max = max(yield_buac),
+            Std_Dev = sd(yield_buac)
+            ) %>%
+  mutate(Data = "Raw",
+         Crop = "Soybeans",
+         Year = 2017) %>%
+  dplyr::select(Data, Year, Crop, everything())
 
-```{r}
-summary_raw %>%
-  bind_rows(summary_filtered)
+summary_raw_y17_soybeans
 ```
+
+```{r summary data y23 cotton}
+summary_raw_y23_cotton = y23_cotton_w %>%
+  st_drop_geometry() %>%
+  summarise(Observations = length(yield_lbac),
+            Min = min(yield_lbac, na.rm = TRUE),
+            Mean = mean(yield_lbac, na.rm = TRUE),
+            Max = max(yield_lbac, na.rm = TRUE),
+            Std_Dev = sd(yield_lbac, na.rm = TRUE)
+            ) %>%
+  mutate(Data = "Raw",
+         Crop = "Cotton",
+         Year = 2023) %>%
+  dplyr::select(Data, Year, Crop, everything())
+
+summary_raw_y23_cotton
+```
+
+```{r summary data y24 cotton}
+summary_raw_y24_cotton = y24_cotton_w %>%
+  st_drop_geometry() %>%
+  summarise(Observations = length(yield_lbac),
+            Min = min(yield_lbac, na.rm = TRUE),
+            Mean = mean(yield_lbac, na.rm = TRUE),
+            Max = max(yield_lbac, na.rm = TRUE),
+            Std_Dev = sd(yield_lbac, na.rm = TRUE)
+            ) %>%
+  mutate(Data = "Raw",
+         Crop = "Cotton",
+         Year = 2024) %>%
+  dplyr::select(Data, Year, Crop, everything())
+
+summary_raw_y24_cotton
+```
+
+
+```{r combine all yield summaries}
+all_ys = summary_raw_y16_corn %>%
+  bind_rows(summary_raw_y17_soybeans) %>%
+  bind_rows(summary_raw_y23_cotton) %>%
+  bind_rows(summary_raw_y24_cotton)
+  
+all_ys
+
+all_ys_table = all_ys %>%
+  gt() %>%
+  tab_header(title = "Yield Summary: Corn, Soybeans and Cotton") %>%
+  fmt_number(columns = c(Mean, Std_Dev, Min, Max), decimals = 1) %>%
+  fmt_number(columns = Observations, decimals = 0, use_seps = TRUE) %>%
+  tab_source_note(source_note = "Yield units: bu/ac for corn and soybean, and lb/ac for cotton") %>%
+  tab_options(
+    table.width = pct(90),
+    table.font.size = 14,
+    data_row.padding = px(8),
+    column_labels.font.weight = "bold",
+    heading.title.font.size = 18,
+    heading.title.font.weight = "bold"
+  )
+
+all_ys_table
+
+# Saving to load it in another script
+saveRDS(all_ys_table, "../output/all_ys_table.rds")
+```
+
+
 
 ## Density plot
 
@@ -527,32 +658,6 @@ ggsave("../ouput/clean_yieldmap20.png",
        bg = "white")
 ```
 
-## Clean yield map interactive
-
-```{r}
-yieldmap_clean_int <- yield20_w_pf %>%
-  mapview(zcol = "yield_lbac",
-        col.regions = viridis(3),
-        alpha.regions = 1,
-        cex = .1,
-        lwd = 0,
-        map.types = "Esri.WorldImagery"
-)
-
-yieldmap_clean_int
-```
-
-## Side-by-side raw vs. cleaned yield map
-
-```{r}
-yieldmap_raw + yieldmap_clean
-```
-
-## Side-by-side raw vs. cleaned yield map interactive
-
-```{r}
-sync(yieldmap_raw_int, yieldmap_clean_int)
-```
 
 # Exporting cleaned version
 
@@ -562,11 +667,4 @@ write_sf(yield20_w_pf,
          delete_dsn = T)
 
 ```
-
-# Summary
-
-Today we:
-
--   Learned about and implemented 5 yield filters (yield, speed, position)\
--   Compared raw and cleaned yield monitor data
 

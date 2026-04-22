@@ -42,7 +42,7 @@ Define map theme for re-use
 mytheme_map <- 
   theme_map()+
   theme(legend.position = "bottom",
-        legend.direction = "horizontal",
+        legend.direction = "vertical",
         panel.background = element_rect(fill="white",
                                         color=NA),
         plot.background = element_rect(fill="white",
@@ -175,10 +175,69 @@ klbac_idw_pred  = predict(klbac_idw_mod,
                           grid_r)
 klbac_idw_pred
 ```
+
+# Grid extraction  
+```{r soil_ph_v}
+ph_v = ph_idw_pred %>%
+  st_as_sf(as_points = F,
+           merge = F) %>%
+  dplyr::select(ph = var1.pred) %>%
+  mutate(ph_class = case_when(
+    ph <= 5.7 ~ "Inhibitory (≤ 5.7)",
+    ph > 5.7 & ph < 6 ~ "Suboptimal (5.7–6.0)",
+    ph >= 6 & ph <= 6.5  ~ "Optimal (6.0–6.5)",
+    ph > 6.5 ~ "Above Optimal (> 6.5)")) %>%
+  mutate(ph_class = factor(ph_class,
+                           levels = c("Inhibitory (≤ 5.7)", "Suboptimal (5.7–6.0)", "Optimal (6.0–6.5)", "Above Optimal (> 6.5)")))
+
+ph_v
+```
+
+
+```{r plbac_v}
+plbac_v <- plbac_idw_pred %>%
+  st_as_sf(as_points = F, 
+           merge = F) %>%
+  dplyr::select(p_lbac = var1.pred) %>%
+  mutate(plbac_class = case_when(
+    p_lbac <= 30 ~ "Low (0–30)",
+    p_lbac > 30 & p_lbac <= 60 ~ "Medium (31–60)",
+    p_lbac > 60 & p_lbac <= 100  ~ "High (61–100)",
+    p_lbac > 100 ~ "Very High (> 100)")) %>%
+  mutate(plbac_class = factor(plbac_class,
+                              levels = c("Low (0–30)", "Medium (31–60)", "High (61–100)", "Very High (> 100)")))
+
+
+plbac_v
+summary(plbac_v)
+```
+
+
+```{r klbac_v}
+klbac_v <- klbac_idw_pred %>%
+  st_as_sf(as_points = F, 
+           merge = F) %>%
+  dplyr::select(k_lbac = var1.pred) %>%
+  mutate(klbac_class = case_when(
+    k_lbac <= 60 ~ "Low (0–60)",
+    k_lbac > 60 & k_lbac <= 150 ~ "Medium (61–150)",
+    k_lbac > 150 & k_lbac <= 250  ~ "High (151–250)",
+    k_lbac > 250 ~ "Very High (> 250)")) %>%
+  mutate(klbac_class = factor(klbac_class,
+                              levels = c("Low (0–60)", "Medium (61–150)", "High (151–250)", "Very High (> 250)")))
+
+
+klbac_v
+summary(klbac_v)
+```
+
+# Plotting Soil Variable Maps
 ```{r ph_map }
 ph_map = ggplot() +
-  geom_stars(data = ph_idw_pred) +
-  scale_fill_viridis_b(na.value = "transparent") +
+  geom_sf(data = ph_v, aes(fill = ph_class),
+          color = NA) +
+  scale_fill_viridis_d(drop = FALSE,
+                       option = "B") +
   geom_sf(data = boundary, fill = NA) +
   labs(fill = "Soil pH",
        title = "Soil pH") +
@@ -197,10 +256,13 @@ ph_map = ggplot() +
 ph_map
 ```
 
+
 ```{r plbac_map }
 plbac_map = ggplot() +
-  geom_stars(data = plbac_idw_pred) +
-  scale_fill_viridis_b(na.value = "transparent") +
+  geom_sf(data = plbac_v, aes(fill = plbac_class),
+          color = NA) +
+  scale_fill_viridis_d(drop = FALSE,
+                       option = "B") +
   geom_sf(data = boundary, fill = NA) +
   labs(fill = "P (lb/ac)",
         title = "Phosphorus") +
@@ -210,22 +272,22 @@ plbac_map
 ```
 
 
-
 ```{r klbac_map }
 klbac_map = ggplot() +
-  geom_stars(data = klbac_idw_pred) +
-  scale_fill_viridis_b(na.value = "transparent",
-                       breaks = c(150, 200, 250)) +
+  geom_sf(data = klbac_v, aes(fill = klbac_class),
+          color = NA) +
+  scale_fill_viridis_d(drop = FALSE,
+                       option = "B") +
   geom_sf(data = boundary, fill = NA) +
   labs(fill = "K (lb/ac)",
-       title = "Potassium") +
+        title = "Potassium") +
   mytheme_map
 
 klbac_map
 ```
 
 
-## Plotting all together
+# Plotting all together
 ```{r plotting all together}
 ph_map + plbac_map + klbac_map +
   plot_annotation(title = "Interpolated Maps for Soil Varables (50-acre Back Field)",
@@ -237,35 +299,7 @@ ggsave("../output/soilph-p-k.png",
        height = 6)
 ```
 
-# Grid extraction  
-```{r soil_ph_v}
-ph_v = ph_idw_pred %>%
-  st_as_sf(as_points = F,
-           merge = F) %>%
-  dplyr::select(ph = var1.pred)
 
-ph_v
-```
-
-
-```{r plbac_v}
-plbac_v <- plbac_idw_pred %>%
-  st_as_sf(as_points = F, 
-           merge = F) %>%
-  dplyr::select(p_lbac=var1.pred) 
-
-plbac_v
-```
-
-
-```{r klbac_v}
-klbac_v <- klbac_idw_pred %>%
-  st_as_sf(as_points = F, 
-           merge = F) %>%
-  dplyr::select(k_lbac=var1.pred) 
-
-klbac_v
-```
 
 # Merging soil pH, P and K layers  
 ```{r soil_v }

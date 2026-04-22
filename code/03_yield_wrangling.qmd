@@ -541,8 +541,40 @@ dplot_y17
 
 ```
 
+
+```{r cotton 23 yield distribution - density plot}
+dplot_y23 = ggplot(y23_cotton_w, aes(x =yield_lbac)) +
+  geom_density(fill = "#6BAED6",
+               color = "black",
+               alpha = 0.6,
+               linewidth = 0.5) +
+  geom_rug(alpha = 0.3) +
+  labs(x = " 2023 Cotton Yield (lb/ac)",
+       y = "Density") +
+  theme_classic(base_size = 12)
+
+dplot_y23
+
+```
+
+```{r cotton 24 yield distribution - density plot}
+dplot_y24 = ggplot(y24_cotton_w, aes(x =yield_lbac)) +
+  geom_density(fill = "#08519C",
+               color = "black",
+               alpha = 1,
+               linewidth = 0.5) +
+  geom_rug(alpha = 0.3) +
+  labs(x = " 2024 Cotton Yield (lb/ac)",
+       y = "Density") +
+  theme_classic(base_size = 12)
+
+dplot_y24
+
+```
+
+
 ```{r combine all density plots}
-dplot_y16 + dplot_y17 + dplot_y16 + dplot_y17 +
+dplot_y16 + dplot_y17 + dplot_y23 + dplot_y24 +
   plot_annotation(title = "Yield Distribution",
                   theme = theme(
       plot.title = element_text(size = 14, face = "bold", hjust = 0.5))) 

@@ -1,5 +1,5 @@
 ---
-title: "Yield monitor editor - 2020"
+title: "Yield monitor editor - for corn, soybeans and cotton 2016, 2017, 2023, and 2024"
 author: "Comfort Adegbenro"
 format:
   html:
@@ -20,11 +20,7 @@ editor_options:
 
 # Learning objectives
 
-Today’s learning objectives are:
-
--   Learn and implement yield monitor data cleaning steps\
--   Compare numerically and graphically raw and cleaned yield monitor data
-
+Clean wrangled yield data through different methods, based on IQR of yields (min and max_y), speed (min and max_v), buffer (removing edge effects)
 # Setup
 
 ## Loading packages
@@ -32,11 +28,6 @@ Today’s learning objectives are:
 ```{r  }
 #| message: false
 
-# installing 
-#install.packages("leafsync")
-#install.packages("patchwork")
-
-#loading packages (add to the list as we need) 
 library(readr)
 library(janitor)
 library(dplyr)

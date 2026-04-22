@@ -42,117 +42,184 @@ library(ggthemes)
 library(ggspatial)
 ```
 
+## Define map theme for re-use
+```{r defining map theme}
+mytheme_map <- 
+  theme_map()+
+  theme(legend.position = "bottom",
+        legend.direction = "vertical",
+        panel.background = element_rect(fill="white",
+                                        color=NA),
+        plot.background = element_rect(fill="white",
+                                       color=NA),
+        legend.title = element_text(size=10),
+        legend.text = element_text(size=9),
+        plot.margin = margin(5, 10, 5, 10))
+
+```
+
+
 ## Importing data
 
-```{r }
-yield20_w = read_sf("../data/yield20_processed.geojson")
+```{r import all yield data for all crops and boundary}
+y16_corn_w = read_sf("../data/y16corn_processed.geojson")
+y16_corn_w
 
-yield20_w 
+y17_soybeans_w = read_sf("../data/y17soybeans_processed.geojson")
+y17_soybeans_w
+
+y23_cotton_w = read_sf("../data/y23cotton_processed.geojson")
+y23_cotton_w
+
+y24_cotton_w = read_sf("../data/y24cotton_processed.geojson")
+y24_cotton_w
+
+boundary = read_sf("../data/50ac/boundary/BackFieldPivot.shp") %>%
+  clean_names() %>%
+  st_set_crs(4326) %>%
+  st_transform(crs = 6345)
+
+boundary
 ```
 
 # EDA
 
 ## Summary
 
-```{r }
-summary(yield20_w) 
+```{r summaries of yields for all crops }
+summary(y16_corn_w)
+summary(y17_soybeans_w)
+summary(y23_cotton_w)
+summary(y24_cotton_w)
 ```
 
 ## Raw map
 
-```{r}
-yieldmap_raw <- ggplot(yield20_w) +
-  geom_sf(aes(color = yield_lbac),
+```{r raw maps for corn}
+ymap16_corn =  y16_corn_w %>%
+  filter(yield_buac < 300) %>%
+  ggplot()+
+  geom_sf(aes(color = yield_buac),
           size = 0.3) +
-  scale_color_viridis_b()
-  
-
-yieldmap_raw
+  scale_color_viridis_b() +
+  geom_sf(data = boundary, fill = NA) +
+  labs(color = "Corn yield (bu/acre)",
+       title = "Map of Corn Raw Yield Data (outlier of >300 bu/ac excluded)") +
+  mytheme_map +
+  annotation_scale(location = "bl",
+                   width_hint = 0.3,
+                   pad_x = unit(0.1, "in"),
+                   pad_y = unit(0.01, "in")) +
+  annotation_north_arrow(location = "tl",
+                       pad_x = unit(0.1, "in"),
+                       pad_y = unit(0.05, "in"),
+                       height = unit(0.4, "in"),
+                       width = unit(0.4, "in"),
+                       style = north_arrow_fancy_orienteering())
+ymap16_corn
 ```
-
-## Raw map interactive
-
-```{r}
-#| warning: false
-
-yieldmap_raw_int <- yield20_w %>%
-  filter(yield_lbac < 3000) %>%
-  mapview(zcol = "yield_lbac",
-        col.regions = viridis(3),
-        alpha.regions = 1,
-        cex = .1,
-        lwd = 0,
-        map.types = "Esri.WorldImagery"
-)
-
-print(yieldmap_raw_int)
-```
-
-Today we are applying 5 filters:
-
--   Min and max yield\
--   Min and max speed\
--   Position
 
 # Yield editor - Min/max yield
 
-## Raw yield distribution
-
-```{r}
-ggplot(data = yield20_w, 
-       aes(x = yield_lbac))+
-  geom_density()+
-  geom_rug()
-```
-
-## Raw yield summary
-
-```{r}
-summary(yield20_w$yield_lbac)
-```
-
 ## Raw yield quantiles
 
-```{r}
-lowq_yield  = quantile(yield20_w$yield_lbac, 0.1)
-lowq_yield
+```{r raw yield quantile corn 2016}
+lowq_y16_corn  = quantile(y16_corn_w$yield_buac, 0.1)
+lowq_y16_corn
 
-upq_yield = quantile (yield20_w$yield_lbac, 0.99)
-upq_yield
+upq_y16_corn = quantile (y16_corn_w$yield_buac, 0.99)
+upq_y16_corn
 
-iqr = upq_yield - lowq_yield
-iqr
+iqr_y16_corn = upq_y16_corn - lowq_y16_corn
+iqr_y16_corn
 
-miny = lowq_yield - (0.25*iqr)
-miny
+miny16_corn = lowq_y16_corn - (0.25*iqr_y16_corn)
+miny16_corn
 
-maxy = upq_yield + (0.25*iqr)
-maxy
+maxy16_corn = upq_y16_corn + (0.25*iqr_y16_corn)
+maxy16_corn
+```
+
+
+
+```{r raw yield quantile soybean 2017}
+lowq_y17_soy  = quantile(y17_soybeans_w$yield_buac, 0.1)
+lowq_y17_soy
+
+upq_y17_soy = quantile (y17_soybeans_w$yield_buac, 0.99)
+upq_y17_soy
+
+iqr_y17_soy = upq_y17_soy - lowq_y17_soy
+iqr_y17_soy
+
+miny17_soy = lowq_y17_soy - (0.25*iqr_y17_soy)
+miny17_soy
+
+maxy17_soy = upq_y17_soy + (0.25*iqr_y17_soy)
+maxy17_soy
+```
+
+```{r raw yield quantile cotton 2023}
+lowq_y23_cot  = quantile(y23_cotton_w$yield_lbac, 0.1,
+                         na.rm = TRUE)
+lowq_y23_cot
+
+upq_y23_cot = quantile (y23_cotton_w$yield_lbac, 0.99,
+                        na.rm = TRUE)
+upq_y23_cot
+
+iqr_y23_cot = upq_y23_cot - lowq_y23_cot
+iqr_y23_cot
+
+miny23_cot = lowq_y23_cot - (0.25*iqr_y23_cot)
+miny23_cot
+
+maxy23_cot = upq_y23_cot + (0.25*iqr_y23_cot)
+maxy23_cot
+```
+
+```{r raw yield quantile cotton 2024}
+lowq_y24_cot  = quantile(y24_cotton_w$yield_lbac, 0.1,
+                         na.rm = TRUE)
+lowq_y24_cot
+
+upq_y24_cot = quantile (y24_cotton_w$yield_lbac, 0.99,
+                        na.rm = TRUE)
+upq_y24_cot
+
+iqr_y24_cot = upq_y24_cot - lowq_y24_cot
+iqr_y24_cot
+
+miny24_cot = lowq_y24_cot - (0.25*iqr_y24_cot)
+miny24_cot
+
+maxy24_cot = upq_y24_cot + (0.25*iqr_y24_cot)
+maxy24_cot
 ```
 
 ## Min/max raw yield quantiles plot
 
-```{r}
+```{r for corn}
 ggplot()+
-  geom_density(data = yield20_w, 
-               aes(x = yield_lbac)) +
-  geom_vline(xintercept = lowq_yield,
+  geom_density(data = y16_corn_w, 
+               aes(x = yield_buac)) +
+  geom_vline(xintercept = lowq_y16_corn,
              color = "red",
              linetype = 2) +
-  geom_vline(xintercept = upq_yield,
+  geom_vline(xintercept = upq_y16_corn,
              color = "blue",
              linetype = 2) +
-  geom_vline(xintercept = miny,
+  geom_vline(xintercept = miny16_corn,
              color = "red",
              linetype = 1) +
-  geom_vline(xintercept = maxy,
+  geom_vline(xintercept = maxy16_corn,
              color = "blue",
              linetype = 1) +
   annotate(geom = "rect",
            ymin = 0,
            ymax = Inf,
-           xmin = miny,
-           xmax = maxy,
+           xmin = miny16_corn,
+           xmax = maxy16_corn,
            alpha = 0.3,
            fill = "green")
 
@@ -161,14 +228,44 @@ ggplot()+
 
 ## Filtering min/max raw yield
 
-```{r}
-yield20_w_yf = yield20_w %>%
-  filter(yield_lbac > miny & yield_lbac < maxy)
+```{r y16_corn y-filtered}
+y16_corn_yf = y16_corn_w %>%
+  filter(yield_buac > miny16_corn & yield_buac < maxy16_corn)
 
-yield20_w_yf
+y16_corn_yf
 ```
 
-Before filtering we had a total of 29,202 rows. How many rows now after filtering? **28,404** rows
+Before filtering we had a total of 23,520 rows. How many rows now after filtering? **22,271** rows
+
+```{r y17_soy y-filtered}
+y17_soy_yf = y17_soybeans_w %>%
+  filter(yield_buac > miny17_soy & yield_buac < maxy17_soy)
+
+y17_soy_yf
+```
+
+Before filtering we had a total of 15,097  rows. How many rows now after filtering? **14,023** rows
+
+```{r y23_cot y-filtered}
+y23_cot_yf = y23_cotton_w %>%
+  filter(yield_lbac > miny23_cot & yield_lbac < maxy23_cot)
+
+y23_cot_yf
+```
+
+Before filtering we had a total of 14,319 rows. How many rows now after filtering? **13,633** rows
+
+```{r y24_cot y-filtered}
+y24_cot_yf = y24_cotton_w %>%
+  filter(yield_lbac > miny24_cot & yield_lbac < maxy24_cot)
+
+y24_cot_yf
+```
+
+Before filtering we had a total of 15,264 rows. How many rows now after filtering? **14,555** rows
+
+
+
 
 ## Min/max yield cleaned summary
 

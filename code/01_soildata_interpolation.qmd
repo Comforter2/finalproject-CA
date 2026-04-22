@@ -290,7 +290,7 @@ klbac_map
 # Plotting all together
 ```{r plotting all together}
 ph_map + plbac_map + klbac_map +
-  plot_annotation(title = "Interpolated Maps for Soil Varables (50-acre Back Field)",
+  plot_annotation(title = "Interpolated Maps for Soil Variables (50-acre Back Field)",
     theme = theme(
       plot.title = element_text(size = 13, face = "bold", hjust = 0.5)))
 

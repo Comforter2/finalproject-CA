@@ -40,6 +40,7 @@ library(leafsync)
 library(patchwork)
 library(ggthemes)
 library(ggspatial)
+library(gt)
 ```
 
 ## Define map theme for re-use
@@ -509,8 +510,8 @@ summary(y23_cot_bf$yield_lbac)
 ### Clean yield summary
 
 # Creating Summaries
-```{r summary data y16 corn}
-summary_raw_y16_corn = y16_corn_all_w %>%
+```{r summary clean data y16 corn}
+summary_clean_y16_corn = y16_corn_bf %>%
   st_drop_geometry() %>%
   summarise(Observations = length(yield_buac),
             Min = min(yield_buac),
@@ -518,16 +519,16 @@ summary_raw_y16_corn = y16_corn_all_w %>%
             Max = max(yield_buac),
             Std_Dev = sd(yield_buac)
             ) %>%
-  mutate(Data = "Raw",
+  mutate(Data = "Clean",
          Crop = "Corn",
          Year = 2016) %>%
   dplyr::select(Data, Year, Crop, everything())
 
-summary_raw_y16_corn
+summary_clean_y16_corn
 ```
 
-```{r summary data y17 soybeans}
-summary_raw_y17_soybeans = y17_soybeans_w %>%
+```{r summary clean data y17 soybeans}
+summary_clean_y17_soybeans = y17_soy_bf %>%
   st_drop_geometry() %>%
   summarise(Observations = length(yield_buac),
             Min = min(yield_buac),
@@ -535,16 +536,16 @@ summary_raw_y17_soybeans = y17_soybeans_w %>%
             Max = max(yield_buac),
             Std_Dev = sd(yield_buac)
             ) %>%
-  mutate(Data = "Raw",
+  mutate(Data = "Clean",
          Crop = "Soybeans",
          Year = 2017) %>%
   dplyr::select(Data, Year, Crop, everything())
 
-summary_raw_y17_soybeans
+summary_clean_y17_soybeans
 ```
 
-```{r summary data y23 cotton}
-summary_raw_y23_cotton = y23_cotton_w %>%
+```{r summary clean data y23 cotton}
+summary_clean_y23_cotton = y23_cot_bf %>%
   st_drop_geometry() %>%
   summarise(Observations = length(yield_lbac),
             Min = min(yield_lbac, na.rm = TRUE),
@@ -552,16 +553,16 @@ summary_raw_y23_cotton = y23_cotton_w %>%
             Max = max(yield_lbac, na.rm = TRUE),
             Std_Dev = sd(yield_lbac, na.rm = TRUE)
             ) %>%
-  mutate(Data = "Raw",
+  mutate(Data = "Clean",
          Crop = "Cotton",
          Year = 2023) %>%
   dplyr::select(Data, Year, Crop, everything())
 
-summary_raw_y23_cotton
+summary_clean_y23_cotton
 ```
 
-```{r summary data y24 cotton}
-summary_raw_y24_cotton = y24_cotton_w %>%
+```{r summary clean data y24 cotton}
+summary_clean_y24_cotton = y24_cot_bf %>%
   st_drop_geometry() %>%
   summarise(Observations = length(yield_lbac),
             Min = min(yield_lbac, na.rm = TRUE),
@@ -569,26 +570,26 @@ summary_raw_y24_cotton = y24_cotton_w %>%
             Max = max(yield_lbac, na.rm = TRUE),
             Std_Dev = sd(yield_lbac, na.rm = TRUE)
             ) %>%
-  mutate(Data = "Raw",
+  mutate(Data = "Clean",
          Crop = "Cotton",
          Year = 2024) %>%
   dplyr::select(Data, Year, Crop, everything())
 
-summary_raw_y24_cotton
+summary_clean_y24_cotton
 ```
 
 
-```{r combine all yield summaries}
-all_ys = summary_raw_y16_corn %>%
-  bind_rows(summary_raw_y17_soybeans) %>%
-  bind_rows(summary_raw_y23_cotton) %>%
-  bind_rows(summary_raw_y24_cotton)
+```{r combine all clean yield summaries}
+all_ys_clean = summary_clean_y16_corn %>%
+  bind_rows(summary_clean_y17_soybeans) %>%
+  bind_rows(summary_clean_y23_cotton) %>%
+  bind_rows(summary_clean_y24_cotton)
   
-all_ys
+all_ys_clean
 
-all_ys_table = all_ys %>%
+all_ys_clean_table = all_ys_clean %>%
   gt() %>%
-  tab_header(title = "Yield Summary: Corn, Soybeans and Cotton") %>%
+  tab_header(title = "Yield Summary Clean Data: Corn, Soybeans and Cotton") %>%
   fmt_number(columns = c(Mean, Std_Dev, Min, Max), decimals = 1) %>%
   fmt_number(columns = Observations, decimals = 0, use_seps = TRUE) %>%
   tab_source_note(source_note = "Yield units: bu/ac for corn and soybean, and lb/ac for cotton") %>%
@@ -601,10 +602,10 @@ all_ys_table = all_ys %>%
     heading.title.font.weight = "bold"
   )
 
-all_ys_table
+all_ys_clean_table
 
 # Saving to load it in another script
-saveRDS(all_ys_table, "../output/all_ys_table.rds")
+saveRDS(all_ys_clean_table, "../output/all_ys_clean_table.rds")
 ```
 
 

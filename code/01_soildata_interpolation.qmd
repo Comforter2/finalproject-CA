@@ -37,6 +37,7 @@ library(patchwork) #combining multiple plots
 library(tibble) #rownames to column
 library(ggspatial)
 ```
+
 Define map theme for re-use
 ```{r defining map theme}
 mytheme_map <- 
@@ -52,6 +53,7 @@ mytheme_map <-
         plot.margin = margin(5, 10, 5, 10))
 
 ```
+
 
 ```{r reading soil-grid data}
 soil_grid = read_sf("../data/50ac/soilgrid/BackFieldPivot_SampleData_2025-02-12.shp")%>%

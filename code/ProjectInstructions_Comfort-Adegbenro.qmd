@@ -205,6 +205,8 @@ read_rds("../output/all_ys_clean_table.rds")
 5m
 
 ## 6. Show Mr. McCormick a map of the cleaned interpolated yield data for each year (include the field boundary).  
+![](../output/ip-yield_maps.png)
+
 
 ## 7. Create yield spatial-temporal variability classes using yield data from all available years. Include here the maps for standardized yield mean, coefficient of variation, and classes. What proportion of pixels were found within each class?  
 

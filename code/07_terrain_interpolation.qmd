@@ -1,0 +1,347 @@
+---
+title: "Terrain properties"
+author: "Comfort Adegbenro"
+format:
+  html:
+    code-fold: false
+    embed-resources: true
+    toc: true
+    number-sections: true
+    theme: journal
+    #cerulean, journal, quartz, sketchy, slate, morph, superhero, vapor
+knitr: 
+  opts_chunk: 
+    message: false
+    warning: false
+---
+
+# Objectives  
+I will be importing only the corn cleaned yield data that contains the elevation data. This has more data point, and performing a summary for all other years show that thy re within range (difference of 12 ft, approximately). From this I will interpolate elevation, and then derive other terrain variables, make maps, and export all layers to file.
+
+
+# Setup  
+```{r loading libraries}
+
+# Packages
+library(dplyr)
+library(tidyr)
+library(janitor)
+library(readr)
+library(sf) #vector manipulation
+library(ggplot2)
+library(viridis)
+library(ggthemes)
+library(gstat) #IDW
+library(stars) #raster manipulation
+library(terra) #topographical variables
+library(patchwork) #combining multiple plots  
+library(tibble) #rownames to column
+
+```
+
+```{r defining map theme}
+mytheme_map <- 
+  theme_map()+
+  theme(legend.position = "bottom",
+        legend.direction = "vertical",
+        panel.background = element_rect(fill="white",
+                                        color=NA),
+        plot.background = element_rect(fill="white",
+                                       color=NA),
+        legend.title = element_text(size=10),
+        legend.text = element_text(size=9),
+        plot.margin = margin(5, 10, 5, 10))
+
+```
+
+```{r reading elevation and boundary data and wrangling}
+elev = read_sf("../data/y16_corn_clean.geojson") %>%
+  mutate(elev_m = elev_ft * 0.3048) %>%
+  dplyr::select(elev_m) 
+
+elev
+summary(elev)
+
+boundary = read_sf("../data/50ac/boundary/BackFieldPivot.shp") %>%
+  st_transform(6345)
+```
+
+
+
+
+# EDA  
+```{r elev map}
+elev %>%
+  ggplot()+
+  geom_sf(aes(color = elev_m), size =.01)+
+  scale_color_viridis_c(option = "E") +
+  geom_sf(data = boundary, fill = NA,
+          linewidth = 1) +
+  mytheme_map
+
+```
+
+
+# Grid
+
+```{r grid_r}
+# grid in raster format
+grid_r = boundary %>%
+  st_make_grid(cellsize = 5) %>% #5 means 5 meters because the boundary is in meters
+  st_as_sf() %>%
+  st_rasterize(dx = 5, dy = 5) %>%
+  st_crop(boundary)
+
+grid_r
+
+ggplot() +
+  geom_stars(data = grid_r)
+
+```
+
+# Interpolation  
+```{r idw_mod}
+idw_mod = gstat(formula = elev_m ~ 1,
+                data = elev)
+
+idw_mod
+```
+
+```{r idw_pred}
+idw_pred = predict(idw_mod, grid_r)
+
+idw_pred
+```
+
+```{r elev_map }
+elev_map <- ggplot() +
+  geom_stars(data = idw_pred) +
+  geom_sf(data = boundary, fill = NA,
+          linewidth = 1) +
+  scale_fill_viridis_b(option = "E",
+                       na.value = "white") +
+  labs(title = "Elevation",
+       fill = "Elev. (m)") +
+  mytheme_map +
+  annotation_scale(location = "bl",
+                   width_hint = 0.3,
+                   pad_x = unit(0.1, "in"),
+                   pad_y = unit(0.01, "in")) +
+  annotation_north_arrow(location = "tl",
+                       pad_x = unit(0.1, "in"),
+                       pad_y = unit(0.05, "in"),
+                       height = unit(0.4, "in"),
+                       width = unit(0.4, "in"),
+                       style = north_arrow_fancy_orienteering())
+  
+
+elev_map
+```
+
+# Computing secondary variables  
+## Slope  
+```{r slope}
+slope <- idw_pred %>%
+  dplyr::select(elev_m = var1.pred) %>%
+  
+  # Transforming to SpatRast for slope computation  
+  terra::rast() %>%
+  terra::terrain(v = "slope",
+                 unit = "radian") %>%
+
+  # Transforming back into stars (so works with ggplot)
+  st_as_stars() %>%
+
+  # Transforming to pct
+  mutate(pct = tan(slope)*100) %>%
+  dplyr::select(pct)
+
+
+slope
+```
+
+
+```{r slope map}
+slope_map <- ggplot()+
+  geom_stars(data = slope)+
+  geom_sf(data = boundary, 
+          fill = NA,
+          linewidth = 1)+
+  scale_fill_viridis_b(option = "E",
+                       na.value = "white")+
+  labs(title = "Slope",
+       fill = "Slope\n(%)")+
+  mytheme_map
+
+slope_map
+```
+
+## Aspect  
+```{r aspect}
+aspect <- idw_pred %>%
+  dplyr::select(elev_m = var1.pred) %>%
+  terra::rast() %>%
+  terra::terrain(v = "aspect",
+                 unit = "degrees") %>%
+  st_as_stars() %>%
+  st_set_crs(value =  6345) # not compulsory to include this
+
+aspect
+```
+
+
+```{r aspect map}
+aspect_map <- ggplot()+
+  geom_stars(data = aspect)+
+  geom_sf(data = boundary, 
+          fill = NA,
+          linewidth = 1)+
+  scale_fill_viridis_b(option = "E",
+                       breaks = c(22.5,
+                                  67.5,
+                                  112.5,
+                                  157.5,
+                                  202.5,
+                                  247.5,
+                                  292.5,
+                                  337.5),
+                       na.value = "white")+
+  labs(title = "Aspect",
+       fill="Aspect\n(degrees)")+
+  mytheme_map
+
+aspect_map
+```
+
+## Flow direction  
+```{r flowdir}
+flowdir <- idw_pred %>%
+  dplyr::select(elev_m = var1.pred) %>%
+  terra::rast() %>%
+  terra::terrain("flowdir",
+                 unit = "radians") %>%
+  st_as_stars() %>%
+  st_set_crs(value =  6345)
+
+flowdir
+summary(flowdir)
+summary(aspect)
+summary(idw_pred)
+```
+
+The NAs are coming from the near-the-boundary cells, which were dropped off as the cells surrounding them are not available to compute the cell values.
+```{r flowdir map}
+flowdir_map <- ggplot()+
+  geom_stars(data = flowdir)+
+  geom_sf(data = boundary, 
+          fill = NA,
+          linewidth = 1)+
+  scale_fill_viridis_b(option = "E",
+                       breaks = c(1,2,
+                                  4,8,
+                                  16,32,
+                                  64,128))+
+  labs(title = "Flow Direction",
+       fill="Flow dir.")+
+  mytheme_map
+
+flowdir_map
+```
+
+```{r flowdir map 2}
+ggplot() +
+  geom_stars(data = flowdir %>%
+               mutate(flowdir = factor(flowdir)))+
+  geom_sf(data = boundary, 
+          fill = NA)+
+  labs(fill="Flow dir.")+
+  mytheme_map +
+  facet_wrap(~flowdir) +
+  theme(legend.position = "none")
+
+```
+
+
+## Plotting all together
+```{r plotting all together}
+elev_map + slope_map + aspect_map + flowdir_map +
+  plot_layout(ncol = 4) +
+  plot_annotation(title = "Interpolated Terrain Maps",
+    theme = theme(
+      plot.title = element_text(size = 13, face = "bold", hjust = 0.5)))
+
+ggsave("../output/ip-terrain_maps.png",
+       width = 18,
+       height = 5)
+```
+
+
+# Grid extraction  
+```{r elev_v}
+elev_v = idw_pred %>%
+  st_as_sf(as_points = F,
+           merge = F) %>%
+  dplyr::select(elev_m = var1.pred)
+
+elev_v
+```
+
+
+```{r slope_v}
+slope_v = slope %>%
+  st_as_sf(as_points = F,
+           merge = F) %>%
+  dplyr::select(slope = pct)
+
+slope_v
+```
+How many rows? Why is that?  We have lower rows because the cells near the boundary do not have neighbours so we cannot estimate the slope.
+
+```{r aspect_v}
+aspect_v <- aspect %>%
+  st_as_sf(as_points = F, 
+           merge = F)
+  
+
+aspect_v
+```
+
+
+```{r flowdir_v}
+flowdir_v <- flowdir %>%
+  st_as_sf(as_points = F, 
+           merge = F)
+flowdir_v
+```
+
+# Joining all topo variables in one object  
+
+```{r terrain_v }
+terrain_v = elev_v %>%
+  st_join(slope_v,
+          join = st_equals,
+          left = T) %>%
+  st_join(aspect_v,
+          join = st_equals,
+          left = T) %>%
+  st_join(flowdir_v,
+          join = st_equals,
+          left = T)
+
+terrain_v %>%
+  summary()
+```
+
+# Exporting  
+Exporting to file to use later for management zone creation.  
+```{r exporting}
+write_sf(terrain_v, 
+         "../data/terrain_v.geojson",
+         delete_dsn = T)
+
+```
+
+
+
+
+

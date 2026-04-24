@@ -210,6 +210,16 @@ read_rds("../output/all_ys_clean_table.rds")
 
 ## 7. Create yield spatial-temporal variability classes using yield data from all available years. Include here the maps for standardized yield mean, coefficient of variation, and classes. What proportion of pixels were found within each class?  
 
+![](../output/sy-temp-stability.png)
+
+
+![](../output/yield-stability-map.png)
+
+```{r}
+read_rds("../output/stab-class_prop.rds")
+```
+
+
 ## 8. Show Mr. McCormick a map of the interpolated terrain variables (include the field boundary).  
 
 ## 9. Show Mr. McCormick a map of the interpolated soil ECa variables (include the field boundary).  

@@ -1,6 +1,6 @@
 ---
 title: "Yield stability"
-author: "All of us"
+author: "Comfort Adegbenro"
 format:
   html:
     code-fold: false
@@ -15,13 +15,9 @@ knitr:
     warning: false
 ---
 
-# Learning Objectives  
-Today, our learning objectives are to:  
+# Objectives  
+The goal is to import the clean and interpolated yield maps for the three crops and 4 years, create year/crop specific spatial yield stability areas, then create spatio-temporal yield stability areas, and export the yield stability layer.  
 
-- Import **interpolated cleaned yield data** for 3 years  
-- Create year-specific spatial yield stability areas  
-- Create spatio-temporal yield stability areas  
-- Export the final yield stability layer  
 
 # Setup  
 ```{r setup }
@@ -33,174 +29,211 @@ library(ggplot2)
 library(viridis)
 library(ggthemes)
 library(tibble)
+library(patchwork)
+library(gt)
+```
+
+
+```{r defining map theme}
+mytheme_map <- 
+  theme_map()+
+  theme(legend.position = "bottom",
+        legend.direction = "vertical",
+        panel.background = element_rect(fill="white",
+                                        color=NA),
+        plot.background = element_rect(fill="white",
+                                       color=NA),
+        legend.title = element_text(size=10),
+        legend.text = element_text(size=9),
+        plot.margin = margin(5, 10, 5, 10))
+
 ```
 
 ## Data import
-```{r yieldic17}
-yieldic17 = read_sf("../data/yield17_interpolated.geojson")
+```{r importing all interpolated yields}
+y16corn_ip = read_sf("../data/y16_corn_ip.geojson")
 
-yieldic17
+y17soy_ip = read_sf("../data/y17_soy_ip.geojson")
 
-summary(yieldic17)
+y23cot_ip = read_sf("../data/y23_cot_ip.geojson")
+
+y24cot_ip = read_sf("../data/y24_cot_ip.geojson")
+
+boundary = read_sf("../data/50ac/boundary/BackFieldPivot.shp") %>%
+  st_transform(crs = 6345)
+
+summary(y16corn_ip)
+summary(y17soy_ip)
+summary(y23cot_ip)
+summary(y24cot_ip)
 ```
-
-
-```{r yieldic19}
-yieldic19 = read_sf("../data/yield19_interpolated.geojson")
-
-summary(yieldic19)
-```
-
-```{r yieldic20}
-yieldic20 = read_sf("../data/yield20_interpolated.geojson")
-yieldic20
-
-summary(yieldic20)
-```
-> What year was the highest yielding?  
-
-2019 because it has the highest median and maximum.
-
-
-> What about the lowest yielding?  
-
-2020 because it has the lowest median and maximum
-
-> Same number of observations for all layers?  
-
-Yes, 3962
-
-> Why is that? 
-
-We used the same boundary and grid size for the three years. They represent a fixed number of cells obtained from creating the grid which was used for interpolation.
 
 
 # Spatial stability  
-Every time we deal with yield data across various years/fields/crops, there are challenges:  
+We have yield data for the same field, but different crops, and different years, so we standardize by median for each year (/crop) which is more stable compared to mean. Calculate the median and then divide the yield observations for each year by that year's median.
 
-- If different years/fields/crops, how to compare?  
-- Even if same field but different years/crops, how to compare?  
-
-Some solutions:  
-
-- Standardize by mean/median/max (numerical). Ex. field mean in a given year was 1500 lb/ac, so divide all other yield values from that year by 1500.  
-
-- Standardize by quantile (categorical). Ex. field median (e.g., 50% quantile) was 2000 lb/ac, so all observations below 2000 are classified as "low", and all above 2000 are classified as "high" for that year.  
-
-**In our case, we are using the numerical approach.**
-First let's calculate median yield per year, and then divide all yield observations for that year by that year's median.
 
 Beginning with 2017 yield data.
-```{r sy_17}
-sy_17 = yieldic17 %>%
-  mutate(medianyield_lbac = median(ipyield_lbac)) %>%
-  mutate(sy = ipyield_lbac/medianyield_lbac *100) %>%
+```{r sy_16c}
+sy_16c = y16corn_ip %>%
+  mutate(medianyield_buac = median(corn_ipyield_buac)) %>%
+  mutate(sy = corn_ipyield_buac/medianyield_buac *100) %>%
   mutate(sy = round(sy, 1)) %>%
-  dplyr::select(sy17 = sy, geometry)
+  dplyr::select(sy16c = sy, geometry)
 
-sy_17
+sy_16c
+summary(sy_16c)
 ```
 Let's check how does this standardization looks like in space.  
 
-```{r sy_17 map}
-sy_17_map = ggplot() +
-  geom_sf(data = sy_17, 
-          aes(fill = sy17),
+```{r sy_16c map}
+sy_16c_map = ggplot() +
+  geom_sf(data = sy_16c, 
+          aes(fill = sy16c),
           color = NA) +
-  scale_fill_gradient2(low = "#440154FF", 
-                       mid = "white",
-                       high = "#22A884FF",
-                       midpoint = 100,
-                       breaks = seq(0, 180, 20),
-                       limits = c(0, 180)) +
-  labs(title = "2017",
+  scale_fill_viridis_b(option = "D", 
+                       breaks = seq(0, 160, 20),
+                       limits = c(0, 160)) +
+   geom_sf(data = boundary, fill = NA,
+          linewidth = 1) +
+ # scale_fill_gradient2(low = "#440154FF", 
+                #       mid = "white",
+               #        high = "#22A884FF",
+              #         midpoint = 100,
+               #        breaks = seq(0, 160, 20),
+               #        limits = c(0, 160)) +
+  labs(title = "Corn (2016)",
        fill = "Median-\nstandardized\nyield") +
-  theme_map() +
-  theme(legend.position = "right")
+  mytheme_map +
+  annotation_scale(location = "bl",
+                   width_hint = 0.3,
+                   pad_x = unit(0.1, "in"),
+                   pad_y = unit(0.01, "in")) +
+  annotation_north_arrow(location = "tl",
+                       pad_x = unit(0.1, "in"),
+                       pad_y = unit(0.05, "in"),
+                       height = unit(0.4, "in"),
+                       width = unit(0.4, "in"),
+                       style = north_arrow_fancy_orienteering())
 
-
-sy_17_map 
+sy_16c_map 
 ```
-Repeat the same steps for 2019.  
+Repeat the same steps for other years.  
 
-```{r sy_19}
-sy_19 = yieldic19 %>%
-  mutate(medianyield_lbac = median(ipyield_lbac)) %>%
-  mutate(sy = ipyield_lbac/medianyield_lbac *100) %>%
+```{r sy_17s}
+sy_17s = y17soy_ip %>%
+  mutate(medianyield_buac = median(soy_ipyield_buac)) %>%
+  mutate(sy = soy_ipyield_buac/medianyield_buac *100) %>%
   mutate(sy = round(sy, 1)) %>%
-  dplyr::select(sy19 = sy, geometry)
+  dplyr::select(sy17s = sy, geometry)
 
 
-sy_19
+sy_17s
+
+summary(sy_17s)
 ```
 
-```{r sy_19 map}
-sy_19_map <- ggplot()+
-  geom_sf(data = sy_19,
-          aes(fill = sy19), 
+```{r sy_17s map}
+sy_17s_map <- ggplot()+
+  geom_sf(data = sy_17s,
+          aes(fill = sy17s), 
           color = NA)+
-  scale_fill_gradient2(low = "#440154FF",
-                       mid = "white",
-                       high = "#22A884FF",
-                       midpoint = 100,
-                       breaks = seq(0,180,20),
-                       limits = c(0, 180)
-  )+
-  labs(title="2019")+
-  theme_map()+
+  scale_fill_viridis_b(option = "D", 
+                       breaks = seq(0, 160, 20),
+                       limits = c(0, 160)) +
+   geom_sf(data = boundary, fill = NA,
+          linewidth = 1) +
+  labs(title="Soybeans (2017)")+
+  mytheme_map +
   theme(legend.position = "none")
 
 
-sy_19_map 
+sy_17s_map 
 ```
-Repeat the same steps for 2020.  
+  
 
-```{r sy_20}
-sy_20  = yieldic20 %>%
-  mutate(medianyield_lbac = median(ipyield_lbac)) %>%
-  mutate(sy = ipyield_lbac/medianyield_lbac *100) %>%
+```{r sy_23c}
+sy_23c  = y23cot_ip %>%
+  mutate(medianyield_lbac = median(cot23_ipyield_lbac)) %>%
+  mutate(sy = cot23_ipyield_lbac/medianyield_lbac *100) %>%
   mutate(sy = round(sy, 1)) %>%
-  dplyr::select(sy20 = sy, geometry)
+  dplyr::select(sy23c = sy, geometry)
 
 
-sy_20
+sy_23c
+summary(sy_23c)
 ```
 
-```{r sy_20 map}
-sy_20_map <- ggplot()+
-  geom_sf(data = sy_20,
-          aes(fill = sy20), 
+```{r sy_23c map}
+sy_23c_map <- ggplot()+
+  geom_sf(data = sy_23c,
+          aes(fill = sy23c), 
           color = NA)+
-  scale_fill_gradient2(low = "#440154FF",
-                       mid = "white",
-                       high = "#22A884FF",
-                       midpoint = 100,
-                       breaks = seq(0,180,20),
-                       limits = c(0, 180)
-  )+
-  labs(title = "2020")+
-  theme_map()+
+   scale_fill_viridis_b(option = "D", 
+                       breaks = seq(0, 160, 20),
+                       limits = c(0, 160)) +
+   geom_sf(data = boundary, fill = NA,
+          linewidth = 1) +
+  labs(title="Cotton (2023)") +
+  mytheme_map +
   theme(legend.position = "none")
 
-sy_20_map 
+sy_23c_map 
 ```
-Let's plot all 3 maps side-by-side to assist in visualizing them.  
+
+```{r sy_24c}
+sy_24c  = y24cot_ip %>%
+  mutate(medianyield_lbac = median(cot24_ipyield_lbac)) %>%
+  mutate(sy = cot24_ipyield_lbac/medianyield_lbac *100) %>%
+  mutate(sy = round(sy, 1)) %>%
+  dplyr::select(sy24c = sy, geometry)
+
+
+sy_24c
+summary(sy_24c)
+```
+
+
+```{r sy_24c map}
+sy_24c_map <- ggplot()+
+  geom_sf(data = sy_24c,
+          aes(fill = sy24c), 
+          color = NA)+
+   scale_fill_viridis_b(option = "D", 
+                       breaks = seq(0, 160, 20),
+                       limits = c(0, 160)) +
+   geom_sf(data = boundary, fill = NA,
+          linewidth = 1) +
+  labs(title="Cotton (2024)") +
+  mytheme_map +
+  theme(legend.position = "none")
+
+sy_24c_map 
+```
+
+
+Plot all 4 maps side-by-side to assist in visualizing them.  
 
 ```{r all maps}
 library(patchwork)
-sy_17_map + sy_19_map + sy_20_map +
-  plot_layout(guides = "collect")
+sy_16c_map + sy_17s_map + sy_23c_map + sy_24c_map +
+  plot_layout(ncol = 4) +
+  plot_annotation(title = "Yield Maps of Spatial Stability",
+    theme = theme(
+      plot.title = element_text(size = 13, face = "bold", hjust = 0.5)))
 
-ggsave("../ouput/spatialstability.png",
-       width = 7, height = 3.5)
+ggsave("../output/sp_stab-yield_maps.png",
+       width = 18,
+       height = 5)
 
 ```
 
 
-```{r}
-summary(sy_17$sy17) #25 to 160
-summary(sy_19$sy19) #6 to 161
-summary(sy_20$sy20) #36 to 161
+```{r summary after spatial stability}
+summary(sy_16c$sy16c) #60 to 152
+summary(sy_17s$sy17s) #60 to 119
+summary(sy_23c$sy23c) #68 to 143
+summary(sy_24c$sy24c) #54 to 140
 ```
 
 # Spatio-temporal stability  
@@ -210,22 +243,25 @@ After joining the data sets, we still only have their information on year-specif
 
 > How can we merge these pieces of information to create a spatial-temporal classification?  
 
-We can use the yield mean and coefficient of variation (CV) of each pixel over 3 years, and use that to guide our decision.    
+We can use the yield mean and coefficient of variation (CV) of each pixel over 4 years, and use that to guide our decision.    
 
-First, let's merge the 3 data sets and calculate pixel-based mean and cv.
+First, let's merge the 4 data sets and calculate pixel-based mean and cv.
 
 ## Pixel-based mean and cv  
 ```{r}
-sy_all = sy_17 %>%
-  st_join(sy_19,
+sy_all = sy_16c %>%
+  st_join(sy_17s,
           join = st_equals,
           left = T)%>%
-  st_join(sy_20,
+  st_join(sy_23c,
+          join = st_equals,
+          left = T) %>%
+  st_join(sy_24c,
           join = st_equals,
           left = T) %>%
   rowwise() %>%
-  mutate(mean_pixel = mean(c(sy17, sy19, sy20))) %>%
-  mutate(sd_pixel = sd(c(sy17, sy19, sy20))) %>%
+  mutate(mean_pixel = mean(c(sy16c, sy17s, sy23c, sy24c))) %>%
+  mutate(sd_pixel = sd(c(sy16c, sy17s, sy23c, sy24c))) %>%
   mutate(cv_pixel = sd_pixel/mean_pixel*100)
 
 sy_all
@@ -241,11 +277,18 @@ summary(sy_all$cv_pixel)
 Density plot:
 ```{r density plot }
 ggplot(data = sy_all,
-       aes(x = cv_pixel)) +
+       aes(x = mean_pixel)) +
   geom_density() +
   geom_rug()
 
 ```
+
+
+```{r find quantiles to define mean and cv marks}
+quantile(sy_all$mean_pixel, 0.15, na.rm = TRUE)
+quantile(sy_all$mean_pixel, 0.95, na.rm = TRUE)
+```
+
 
 Standardized mean map
 ```{r mean map}
@@ -254,20 +297,41 @@ sy_all_mean = ggplot() +
           aes(fill = mean_pixel),
           color = NA) +
   scale_fill_viridis_b(option = "C",
-                       breaks = c(80, 120))
-
+                       breaks = c(90, 110)
+                       ) +
+  geom_sf(data = boundary, fill = NA,
+          linewidth = 1) +
+  labs(title = "Spatial-temporal Stability Map for standardized yield mean",
+       fill = "Mean Pixel") +
+  mytheme_map +
+  annotation_scale(location = "bl",
+                   width_hint = 0.3,
+                   pad_x = unit(0.1, "in"),
+                   pad_y = unit(0.01, "in")) +
+  annotation_north_arrow(location = "tl",
+                       pad_x = unit(0.1, "in"),
+                       pad_y = unit(0.05, "in"),
+                       height = unit(0.4, "in"),
+                       width = unit(0.4, "in"),
+                       style = north_arrow_fancy_orienteering())
 
 sy_all_mean
 ```
 
-Standardized mean cv map  
+Standardized  cv map  
 ```{r cv map}
 sy_all_cv =  ggplot() +
   geom_sf(data = sy_all,
           aes(fill = cv_pixel),
           color = NA) +
   scale_fill_viridis_b(option = "C",
-                       breaks = c(30))
+                       breaks = c(20)) +
+                       #limit = c(0, 30)) 
+   geom_sf(data = boundary, fill = NA,
+          linewidth = 1) +
+  labs(title = "Spatial-temporal Stability Map for standardized yield CV",
+       fill = "CV Pixel") +
+  mytheme_map 
 
 sy_all_cv
 
@@ -276,8 +340,8 @@ sy_all_cv
 ```{r both maps}
 sy_all_mean + sy_all_cv
 
-ggsave("../ouput/sy-temp-stability.png",
-       width = 6, height = 4)
+ggsave("../output/sy-temp-stability.png",
+       width = 12, height = 4)
 
 ```
 
@@ -285,23 +349,23 @@ ggsave("../ouput/sy-temp-stability.png",
 
 Here's how I want to classify our spatial-temporal classes:  
 
-- If a pixel has CV > 30%, then it is classified as "unstable"  
+- If a pixel has CV > 20%, then it is classified as "unstable"  
 
-- If a pixel has CV < 30%, and mean standardized yield > 120%, then it is classified as "high-stable"  
+- If a pixel has CV < 20%, and mean standardized yield > 110%, then it is classified as "high-stable"  
 
-- If a pixel has CV < 30%, and mean standardized yield > 80% and < 120%, then it is classified as "medium-stable" 
+- If a pixel has CV < 20%, and mean standardized yield > 90% and < 110%, then it is classified as "medium-stable" 
 
-- If a pixel has CV < 30%, and mean standardized yield < 80%, then it is classified as "low-stable" 
+- If a pixel has CV < 20%, and mean standardized yield < 90%, then it is classified as "low-stable" 
 
 Let's apply these rules below:  
 
-```{r}
+```{r creating classes}
 sy_all_class = sy_all %>%
   mutate(stclass = case_when(
-    cv_pixel > 30 ~ "unstable",
-    cv_pixel < 30 & mean_pixel >= 120 ~ "high-stable",
-    cv_pixel < 30 & mean_pixel >= 80 & mean_pixel < 120 ~ "medium-stable",
-    cv_pixel < 30 & mean_pixel < 80 ~ "low-stable"
+    cv_pixel > 20 ~ "unstable",
+    cv_pixel < 20 & mean_pixel >= 110 ~ "high-stable",
+    cv_pixel < 20 & mean_pixel >= 90 & mean_pixel < 110 ~ "medium-stable",
+    cv_pixel < 20 & mean_pixel < 90 ~ "low-stable"
     
   ))
 
@@ -309,41 +373,65 @@ sy_all_class
 ```
 
 Now, let's plot the classes.  
-```{r}
+```{r plotting stability classes}
 ggplot() +
   geom_sf(data = sy_all_class,
           aes(fill = stclass),
           color = NA) +
-  scale_fill_viridis_d(option = "C")
+  scale_fill_viridis_d(option = "C") +
+  geom_sf(data = boundary, fill = NA,
+          linewidth = 1) +
+  labs(title = "Yield Stability Map for 4 years for Mr McCormick",
+       fill = "Stability Classes") +
+  mytheme_map +
+  annotation_scale(location = "bl",
+                   width_hint = 0.3,
+                   pad_x = unit(0.1, "in"),
+                   pad_y = unit(0.01, "in")) +
+  annotation_north_arrow(location = "tl",
+                       pad_x = unit(0.1, "in"),
+                       pad_y = unit(0.05, "in"),
+                       height = unit(0.4, "in"),
+                       width = unit(0.4, "in"),
+                       style = north_arrow_fancy_orienteering())
+
+ggsave("../output/yield-stability-map.png",
+       width = 8, height = 5)
 ```
 
 
-> Just eyeballing, what is the major stability class? And the minor?  
 
 # Classes proportion  
-Let's calculate below:  
+ 
 ```{r proportion per stability zone}
-sy_all_class %>%
+pix_prop = sy_all_class %>%
   group_by(stclass) %>%
   tally() %>%
-  mutate(percent = n/3962*100)
+  mutate(Proportion = n/6359 *100) %>%
+  st_drop_geometry() %>%
+  rename(Observations = n) %>%
+  gt() %>%
+  tab_header(title = "Proportion of Stability Classes") %>%
+  fmt_number(columns = c(Mean, Std_Dev, Min, Max), decimals = 1) %>%
+  fmt_number(columns = Observations, decimals = 0, use_seps = TRUE) %>%
+  tab_options(
+    table.width = pct(90),
+    table.font.size = 14,
+    data_row.padding = px(8),
+    column_labels.font.weight = "bold",
+    heading.title.font.size = 18,
+    heading.title.font.weight = "bold"
+  )
+
+pix_prop
+write_rds("../output/stab-class_prop.rds")
 
 ```
 
 # Exporting  
-Let's export this data set so we can use it again in a future exercise.  
+ 
 ```{r exporting yield stability}
 write_sf(sy_all_class, "../data/sy_all.geojson",
          delete_dsn = T)
 ```
 
-# Summary  
-
-Today we:  
-
-- Imported all three interpolated cleaned yield data  
-- Standardized each year-specific yield pixel by dividing it by the year median (spatial stability)  
-- Joined the three data sets, calculated pixel-based CV, and classified each pixel as stable high, stable low, or unstable based on pixel standardized yield and CV (spatial-temporal stability)  
-- Exported the spatial-temporal stability layer  
-
-# Assignment 7  

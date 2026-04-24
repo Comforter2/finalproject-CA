@@ -63,6 +63,11 @@ y23_cot_c
 y24_cot_c = read_sf("../data/y24_cot_clean.geojson")
 y24_cot_c
 
+
+summary(y16_corn_c$elev_ft)
+summary(y17_soy_c$elev_ft)
+summary(y23_cot_c$elev_ft)
+summary(y24_cot_c$elev_ft)
 ```
 
 

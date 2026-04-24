@@ -409,11 +409,12 @@ pix_prop = sy_all_class %>%
   tally() %>%
   mutate(Proportion = n/6359 *100) %>%
   st_drop_geometry() %>%
-  rename(Observations = n) %>%
+  rename(`Observations (6369)` = n,
+         `Stability-Classes` = stclass) %>%
   gt() %>%
   tab_header(title = "Proportion of Stability Classes") %>%
-  fmt_number(columns = c(Mean, Std_Dev, Min, Max), decimals = 1) %>%
-  fmt_number(columns = Observations, decimals = 0, use_seps = TRUE) %>%
+  fmt_number(columns = c(Proportion), decimals = 1) %>%
+  fmt_number(columns = `Observations (6369)`, decimals = 0, use_seps = TRUE) %>%
   tab_options(
     table.width = pct(90),
     table.font.size = 14,
@@ -424,7 +425,7 @@ pix_prop = sy_all_class %>%
   )
 
 pix_prop
-write_rds("../output/stab-class_prop.rds")
+write_rds(pix_prop, "../output/stab-class_prop.rds")
 
 ```
 

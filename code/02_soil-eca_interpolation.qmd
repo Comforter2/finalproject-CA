@@ -1,6 +1,6 @@
 ---
 title: "Soil ECa"
-author: "All of us"
+author: "Comfort"
 format:
   html:
     code-fold: false
@@ -15,13 +15,9 @@ knitr:
     warning: false
 ---
 
-# Learning Objectives  
+# Objectives  
 
-Today, our objectives are to:  
-
-- Import soil ECa data  
-- Interpolate soil ECa point data for two depths   
-- Export soil ECa layers to file  
+I will import Soil ECa data at two depths, do some interpolation using IDW method make publication ready maps with boundaries and export the soil eca layers to file. 
 
 # Setup  
 ```{r setup }
@@ -45,35 +41,48 @@ library(tibble) #rownames to column
 ```{r defining map theme}
 mytheme_map <- 
   theme_map()+
-  theme(legend.position = "right",
-        panel.background = element_rect(fill="gray80",
+  theme(legend.position = "bottom",
+        legend.direction = "vertical",
+        panel.background = element_rect(fill="white",
                                         color=NA),
-        plot.background = element_rect(fill="gray80",
+        plot.background = element_rect(fill="white",
                                        color=NA),
-        legend.title = element_text(size=14),
-        legend.text = element_text(size=12))
+        legend.title = element_text(size=10),
+        legend.text = element_text(size=9),
+        plot.margin = margin(5, 10, 5, 10))
 
 ```
 
-```{r reading elevation data}
-eca = read_csv("../data/06_soil-ec.csv")
+```{r reading eca data}
+eca = read_sf("../data/50ac/ec/VSEC_50_acre.shp") %>%
+  clean_names()
 
 eca
+summary(eca)
 ```
+
+```{r boundary_w}
+boundary_w = read_sf("../data/50ac/boundary/BackFieldPivot.shp") %>%
+  st_transform(crs = 6345)
+
+boundary_w
+```
+
+
 # Wrangling  
 ```{r eca_w}
 eca_w = eca %>%
-  clean_names() %>%
-  select(x = f1,
-         y = f2,
-         eca30_dsm = f3,
-         eca90_dsm = f4,
-         elev_ft = f5) %>%
+  dplyr::select(x = longitude,
+         y = latitude,
+         eca30_dsm = e_cshallow,
+         eca90_dsm = e_cdeep,
+         elev_ft = elevation) %>%
   st_as_sf(coords = c("x", "y")) %>%
-  st_set_crs(value = 4326) %>%
-  st_transform(crs = 6345)
+  st_transform(crs = 6345) %>%
+  st_filter(boundary_w) 
 
 eca_w 
+summary(eca_w)
 ```
 
 # EDA  
@@ -83,6 +92,8 @@ eca_w %>%
   geom_sf(aes(color = eca30_dsm),
           size = .5) +
   scale_color_viridis_b() +
+  geom_sf(data = boundary_w, fill = NA,
+          linewidth = 1)+
   mytheme_map
 ```
 
@@ -93,6 +104,8 @@ eca_w %>%
   geom_sf(aes(color = eca90_dsm),
           size = .5) +
   scale_color_viridis_b() +
+  geom_sf(data = boundary_w, fill = NA,
+          linewidth = 1)+
   mytheme_map
 
 ```
@@ -100,20 +113,14 @@ eca_w %>%
 # Grid  
 Since we are interpolating, we need to create a grid (same as for the yield and terrain exercises) based on the field boundary.    
 
-```{r boundary_w}
-boundary_w = read_sf("../../05-digitizing/ouput/boundary.geojson") %>%
-  st_transform(crs = 6345)
-
-boundary_w
-```
 
 ```{r grid_r}
 # grid in vector format
 grid_r = boundary_w %>%
-  st_make_grid(cellsize = 10) %>%
+  st_make_grid(cellsize = 5) %>%
   st_as_sf() %>%
-  st_rasterize(dx = 10,
-               dy = 10) %>%
+  st_rasterize(dx = 5,
+               dy = 5) %>%
   st_crop(boundary_w)
 
 grid_r
@@ -143,10 +150,23 @@ eca30_idw_pred
 ```{r eca30_map }
 eca30_map = ggplot() +
   geom_stars(data = eca30_idw_pred) +
-  scale_fill_viridis_c() +
-  geom_sf(data = boundary_w, fill = NA) +
-  labs(fill = "Eca \n0-30 cm \n(dS/m)") +
-  mytheme_map
+  scale_fill_viridis_c(na.value = "white") +
+  geom_sf(data = boundary_w, fill = NA,
+          linewidth = 1) +
+  labs(title = "ECa (shallow)",
+       fill = "Eca \n0-30 cm \n(dS/m)") +
+  mytheme_map +
+  annotation_scale(location = "bl",
+                   width_hint = 0.3,
+                   pad_x = unit(0.1, "in"),
+                   pad_y = unit(0.01, "in")) +
+  annotation_north_arrow(location = "tl",
+                       pad_x = unit(0.1, "in"),
+                       pad_y = unit(0.05, "in"),
+                       height = unit(0.4, "in"),
+                       width = unit(0.4, "in"),
+                       style = north_arrow_fancy_orienteering())
+  
 
 eca30_map
 ```
@@ -168,9 +188,11 @@ eca90_idw_pred
 ```{r eca90_map }
 eca90_map <- ggplot()+
   geom_stars(data = eca90_idw_pred)+
-  scale_fill_viridis_c()+
-  geom_sf(data=boundary_w, fill=NA)+
-  labs(fill="ECa\n0-90 cm\n(dS/m)")+
+  scale_fill_viridis_c(na.value = "white") +
+  geom_sf(data = boundary_w, fill = NA,
+          linewidth = 1) +
+  labs(title = "ECa (shallow)",
+       fill="ECa\n0-90 cm\n(dS/m)")+
   mytheme_map
 
 eca90_map
@@ -178,11 +200,17 @@ eca90_map
 
 ## Plotting all together
 ```{r plotting all together}
-eca30_map + eca90_map
+eca30_map + eca90_map + 
+  plot_layout(ncol = 2) +
+  plot_annotation(title = "Interpolated Electrical Conductivity (ECa) Maps",
+    theme = theme(
+      plot.title = element_text(size = 13, face = "bold", hjust = 0.5)))
 
-ggsave("../output/soileca.png", 
-       width = 6, 
-       height = 3)
+ggsave("../output/soileca.png",
+       width = 12,
+       height = 4)
+
+
 ```
 
 # Grid extraction  
@@ -224,15 +252,3 @@ write_sf(eca_v,
 
 ```
 
-# Summary  
-Today we have:  
-- Imported point vector soil ECa data  
-- Interpolated soil ECa at two different depths to same grid as used for yield (keeping them all on same spatial extent and resolution)  
-- Transformed them into vector, joined both depths in one object, and exported to file  
-
-# What's next?  
-Next we will be ready to create and validate management zones!
-
-For that, we will first load all layers created until now together.
-
-Then, we will use a clustering algorithm to create zones, and will validate them. 

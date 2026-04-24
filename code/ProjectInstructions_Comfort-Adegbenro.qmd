@@ -220,9 +220,14 @@ read_rds("../output/stab-class_prop.rds")
 ```
 
 
-## 8. Show Mr. McCormick a map of the interpolated terrain variables (include the field boundary).  
+## 8. Show Mr. McCormick a map of the interpolated terrain variables (include the field boundary).
 
-## 9. Show Mr. McCormick a map of the interpolated soil ECa variables (include the field boundary).  
+![](../output/ip-terrain_maps.png)
+
+
+## 9. Show Mr. McCormick a map of the interpolated soil ECa variables (include the field boundary). 
+
+![](../output/soileca.png)
 
 ## 10. Use all interpolated field-related variables (soil P, K, pH, soil EC at two depths, soil terrain properties) to create zones. How many clusters/zones did you decide that this field needs? What metric did you use to make this decision? (check the `Code tips` section below for a note on this).  
 

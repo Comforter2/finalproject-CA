@@ -16,7 +16,7 @@ knitr:
 ---
 
 # Objectives  
-I will be importing only the corn cleaned yield data that contains the elevation data. This has more data point, and performing a summary for all other years show that thy re within range (difference of 12 ft, approximately). From this I will interpolate elevation, and then derive other terrain variables, make maps, and export all layers to file.
+I will be importing eca data that contains the elevation data. From this I will interpolate elevation, and then derive other terrain variables, make maps, and export all layers to file.
 
 
 # Setup  
@@ -55,15 +55,22 @@ mytheme_map <-
 ```
 
 ```{r reading elevation and boundary data and wrangling}
-elev = read_sf("../data/y16_corn_clean.geojson") %>%
-  mutate(elev_m = elev_ft * 0.3048) %>%
-  dplyr::select(elev_m) 
+elev = read_sf("../data/50ac/ec/VSEC_50_acre.shp") %>%
+  clean_names() %>%
+  mutate(elev_m = elevation) %>%
+  dplyr::select(elev_m) %>%
+  st_transform(6345)
+  
 
 elev
 summary(elev)
 
 boundary = read_sf("../data/50ac/boundary/BackFieldPivot.shp") %>%
   st_transform(6345)
+
+elev = elev %>%
+  st_filter(boundary)
+  
 ```
 
 
@@ -168,7 +175,8 @@ slope_map <- ggplot()+
           fill = NA,
           linewidth = 1)+
   scale_fill_viridis_b(option = "E",
-                       na.value = "white")+
+                       na.value = "white",
+                       breaks = c(3, 6, 9, 12))+
   labs(title = "Slope",
        fill = "Slope\n(%)")+
   mytheme_map
@@ -240,7 +248,8 @@ flowdir_map <- ggplot()+
                        breaks = c(1,2,
                                   4,8,
                                   16,32,
-                                  64,128))+
+                                  64,128),
+                       na.value = "white")+
   labs(title = "Flow Direction",
        fill="Flow dir.")+
   mytheme_map

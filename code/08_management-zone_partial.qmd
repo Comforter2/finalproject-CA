@@ -1,17 +1,12 @@
 ---
+author: "Comfort Adegbenro"
 title: "Creating and validating zones"
 format: html
 ---
 
-# Learning Objectives  
-Today's objectives are to:  
-- **Import** the joined layers
+# Objectives  
+I will be joining all the layers, import the joined layers, perform a clustering analysis using k-means in order to create zones, assess how variables are impacting zones and validate zones with yield spatial-temporal stability areas.
 
-- Perform a clustering analysis called **k-means** to create zones  
-
-- **Assess** how variables are impacting different zones  
-
-- **Validate** zones with yield spatial-temporal stability areas  
 
 # Setup  
 ```{r setup }
@@ -37,6 +32,23 @@ library(ggpubr)
 
 ```
 
+
+```{r defining map theme}
+mytheme_map <- 
+  theme_map()+
+  theme(legend.position = "bottom",
+        legend.direction = "vertical",
+        panel.background = element_rect(fill="white",
+                                        color=NA),
+        plot.background = element_rect(fill="white",
+                                       color=NA),
+        legend.title = element_text(size=10),
+        legend.text = element_text(size=9),
+        plot.margin = margin(5, 10, 5, 10))
+
+```
+
+
 # Data import  
 
 Let's import the layers we have produced until this point, including:  
@@ -47,25 +59,33 @@ Let's import the layers we have produced until this point, including:
 - Soil ECa (0-30 and 0-90 cm layers)  
 
 ```{r sty_v}
-sty_v  = read_sf("../../07_yieldmonitor/data/sy_all.geojson")
+sty_v  = read_sf("../data/sy_all.geojson")
 
 sty_v
 ```
 
 ```{r terrain_v}
-terrain_v  = read_sf("../../08_terrain/data/terrain_v.geojson")
+terrain_v  = read_sf("../data/terrain_v.geojson")
 
 terrain_v
 ```
 
 ```{r eca_v }
-eca_v = read_sf("../../09_soilec/data/eca_v.geojson")
+eca_v = read_sf("../data/eca_v.geojson")
 
 eca_v
 ```
 
+
+```{r soil ph p k}
+soil_v = read_sf("../data/soil_v.geojson")
+
+soil_v
+```
+
+
 ```{r boundary_w}
-boundary_w = read_sf("../../05-digitizing/ouput/boundary.geojson") %>%
+boundary_w = read_sf("../data/50ac/boundary/BackFieldPivot.shp") %>%
   st_transform(crs = 6345)
 
 boundary_w
@@ -78,6 +98,9 @@ all_v <- sty_v %>%
           join = st_equals, 
           left = T) %>%
   st_join(eca_v, 
+          join = st_equals, 
+          left = T) %>%
+  st_join(soil_v, 
           join = st_equals, 
           left = T) %>%
   relocate(geometry, .after = last_col())
@@ -93,13 +116,13 @@ write_sf(all_v,
 ```
 
 ```{r all_v}
-all_v = read_sf("../../10_stabilityvalidation/data/all_v.geojson")
+all_v = read_sf("../data/all_v.geojson")
 
 all_v
 ```
 
 ```{r boundary_w}
-boundary_w = read_sf("../../05-digitizing/ouput/boundary.geojson") %>%
+boundary_w = read_sf("../data/50ac/boundary/BackFieldPivot.shp") %>%
   st_transform(crs = 6345)
 
 boundary_w
@@ -115,7 +138,7 @@ summary(all_v)
 # k-means in theory  
 k-means is a unsupervised clustering algorithm that partitions the data into k groups, where k is defined by the user (i.e., you).  
 
-If you have a y-variable that is the predicted variable, and you provide the y variable, it is supervised analysis. But analysis that are unsupervised do not take y variables, but onmly x variables. You are not giving the labels, and the analysis is suppossed to find the commonality.
+If you have a y-variable that is the predicted variable, and you provide the y variable, it is supervised analysis. But analysis that are unsupervised do not take y variables, but only x variables. You are not giving the labels, and the analysis is supposed to find the commonality.
 
 ## How does k-mean works?  
 Let's look at the example below:  
@@ -189,7 +212,7 @@ all_v_n = all_v %>%
   # Dropping NA cells
   drop_na() %>%
   # Selecting variables of interest
-  dplyr::select(elev_m:eca90_dsm,
+  dplyr::select(elev_m:ph, k_lbac, p_lbac,
                 -flowdir) %>%
   # Standardizing 
   mutate(across(where(is.numeric), ~scale(.x)))
@@ -271,7 +294,7 @@ fviz_nbclust(bestk) # 13 tests proposed 2 as best
 
 ```
 
-
+I ran the analysis and it shows 2 clusters as the best.
 Let's go with 2 clusters:
 ```{r @ mod_km2 }
 mod_km2 = kmeans(all_v_n %>%
@@ -303,13 +326,26 @@ ggplot() +
           aes(fill = cluster),
           color = NA) +
   scale_fill_colorblind() +
+  geom_sf(data = boundary_w, fill = NA,
+          linewidth = 1) +
   labs(title = "Unsmoothed zones") +
   theme_map() +
-  theme(plot.title = element_text(color = "blue"))
+  theme(plot.title = element_text(color = "blue")) +
+  mytheme_map +
+  annotation_scale(location = "bl",
+                   width_hint = 0.3,
+                   pad_x = unit(0.1, "in"),
+                   pad_y = unit(0.01, "in")) +
+  annotation_north_arrow(location = "tl",
+                       pad_x = unit(0.1, "in"),
+                       pad_y = unit(0.05, "in"),
+                       height = unit(0.4, "in"),
+                       width = unit(0.4, "in"),
+                       style = north_arrow_fancy_orienteering())
 
-#ggsave("../output/zones_unsmoothed.png",
-     #  width = 3,
-      # height = 4)
+ggsave("../output/zones_unsmoothed.png",
+       width = 6,
+       height = 4)
 ```
 
 # Smoothing zones  
@@ -322,18 +358,204 @@ knitr::include_graphics("https://r.geocompx.org/images/04_focal_example.png")
 library(stars)
 # grid in vector format
 grid_r <-  boundary_w %>%
-  st_make_grid(cellsize = 10) %>%
+  st_make_grid(cellsize = 5) %>%
   st_as_sf() %>%
-  st_rasterize(dx=10, dy=10) %>%
+  st_rasterize(dx=5, dy=5) %>%
   st_crop(boundary_w)
 ```
 
+## 3 x 3
 
-```{r smoothing as raster}
+```{r smoothing as 3 x 3 mean raster}
 library(starsExtra)
 library(gstat)
 
-zone_s = zone_df %>%
+zone_s_3m = zone_df %>%
+  dplyr::select(cluster) %>%
+  # Transforming from polygon to point
+  st_cast("POINT") %>%
+  # Transforming from geometry to xy (needed by the focal function)
+  st_sfc2xy() %>%
+  # Transforming from point (vector) to raster
+  st_as_stars() %>%
+  # Applying focal filter
+  focal2(w = matrix(1,3,3),
+         fun = "mean") %>%
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+  # Interpolating to fill to boundary
+  gstat(formula = cluster ~ 1,
+        data = .) %>%
+  predict(grid_r) %>%
+
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+
+  # Rounding  
+  mutate(cluster_f = round(var1.pred, 0)) %>%
+  # Adjusting cluster id from numeric to factor
+  mutate(cluster_f = factor(cluster_f)) %>%
+  st_intersection(boundary_w)
+
+zone_s_3m
+
+
+```
+
+```{r 3x3 mean smoothed plot}
+mean_map3 = zone_s_3m %>%
+  ggplot()+
+  geom_sf(aes(fill = cluster_f),
+          color = NA) +
+  geom_sf(data = boundary_w, fill=NA,
+          linewidth = 1)+
+  scale_fill_colorblind()+
+  labs(title="3x3, Mean")+
+  theme_map()+
+  theme(plot.title = element_text(color="blue")) +
+  mytheme_map +
+  annotation_scale(location = "bl",
+                   width_hint = 0.3,
+                   pad_x = unit(0.1, "in"),
+                   pad_y = unit(0.01, "in")) +
+  annotation_north_arrow(location = "tl",
+                       pad_x = unit(0.1, "in"),
+                       pad_y = unit(0.05, "in"),
+                       height = unit(0.4, "in"),
+                       width = unit(0.4, "in"),
+                       style = north_arrow_fancy_orienteering())
+  
+
+mean_map3
+
+
+```
+
+
+```{r smoothing as 3 x 3 min raster}
+
+
+zone_s_3min = zone_df %>%
+  dplyr::select(cluster) %>%
+  # Transforming from polygon to point
+  st_cast("POINT") %>%
+  # Transforming from geometry to xy (needed by the focal function)
+  st_sfc2xy() %>%
+  # Transforming from point (vector) to raster
+  st_as_stars() %>%
+  # Applying focal filter
+  focal2(w = matrix(1,3,3),
+         fun = "min") %>%
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+  # Interpolating to fill to boundary
+  gstat(formula = cluster ~ 1,
+        data = .) %>%
+  predict(grid_r) %>%
+
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+
+  # Rounding  
+  mutate(cluster_f = round(var1.pred, 0)) %>%
+  # Adjusting cluster id from numeric to factor
+  mutate(cluster_f = factor(cluster_f)) %>%
+  st_intersection(boundary_w)
+
+zone_s_3min
+
+
+```
+
+```{r 3x3 min smoothed plot}
+min_map3 = zone_s_3min %>%
+  ggplot()+
+  geom_sf(aes(fill = cluster_f),
+          color = NA) +
+  geom_sf(data = boundary_w, fill=NA,
+          linewidth = 1)+
+  scale_fill_colorblind()+
+  labs(title="3x3, Min")+
+  theme_map()+
+  theme(plot.title = element_text(color="blue")) +
+  mytheme_map
+
+min_map3
+```
+
+
+```{r smoothing as 3 x 3 max raster}
+
+
+zone_s_3max = zone_df %>%
+  dplyr::select(cluster) %>%
+  # Transforming from polygon to point
+  st_cast("POINT") %>%
+  # Transforming from geometry to xy (needed by the focal function)
+  st_sfc2xy() %>%
+  # Transforming from point (vector) to raster
+  st_as_stars() %>%
+  # Applying focal filter
+  focal2(w = matrix(1,3,3),
+         fun = "max") %>%
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+  # Interpolating to fill to boundary
+  gstat(formula = cluster ~ 1,
+        data = .) %>%
+  predict(grid_r) %>%
+
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+
+  # Rounding  
+  mutate(cluster_f = round(var1.pred, 0)) %>%
+  # Adjusting cluster id from numeric to factor
+  mutate(cluster_f = factor(cluster_f)) %>%
+  st_intersection(boundary_w)
+
+zone_s_3max
+
+
+```
+
+```{r 3x3 max smoothed plot}
+max_map3 = zone_s_3max %>%
+  ggplot()+
+  geom_sf(aes(fill = cluster_f),
+          color = NA) +
+  geom_sf(data = boundary_w, fill=NA,
+          linewidth = 1)+
+  scale_fill_colorblind()+
+  labs(title="3x3, Max")+
+  theme_map()+
+  theme(plot.title = element_text(color="blue")) +
+  mytheme_map
+
+max_map3
+```
+
+```{r combining 3 x 3 maps}
+mean_map3 + min_map3 + max_map3 + 
+  plot_layout(ncol = 3) +
+  plot_annotation(title = "3 x 3 Smoothed Maps",
+    theme = theme(
+      plot.title = element_text(size = 13, face = "bold", hjust = 0.5)))
+
+ggsave("../output/3x3_maps.png",
+       width = 15,
+       height = 5)
+```
+
+
+## 5 x 5
+
+
+```{r smoothing as 5 x 5 mean raster}
+library(starsExtra)
+library(gstat)
+
+zone_s_5m = zone_df %>%
   dplyr::select(cluster) %>%
   # Transforming from polygon to point
   st_cast("POINT") %>%
@@ -360,31 +582,363 @@ zone_s = zone_df %>%
   mutate(cluster_f = factor(cluster_f)) %>%
   st_intersection(boundary_w)
 
-zone_s
+zone_s_5m
 
 
 ```
 
-```{r smoothed plot}
-zone_s %>%
+```{r 5x5 mean smoothed plot}
+mean_map5 = zone_s_5m %>%
   ggplot()+
   geom_sf(aes(fill = cluster_f),
           color = NA) +
-  geom_sf(data = boundary_w, fill=NA)+
+  geom_sf(data = boundary_w, fill=NA,
+          linewidth = 1)+
   scale_fill_colorblind()+
-  labs(title="Smoothed zones, 5x5, Mean")+
+  labs(title="5x5, Mean")+
   theme_map()+
-  theme(plot.title = element_text(color="blue"))
+  theme(plot.title = element_text(color="blue")) +
+  mytheme_map +
+  annotation_scale(location = "bl",
+                   width_hint = 0.3,
+                   pad_x = unit(0.1, "in"),
+                   pad_y = unit(0.01, "in")) +
+  annotation_north_arrow(location = "tl",
+                       pad_x = unit(0.1, "in"),
+                       pad_y = unit(0.05, "in"),
+                       height = unit(0.4, "in"),
+                       width = unit(0.4, "in"),
+                       style = north_arrow_fancy_orienteering())
+  
 
-ggsave("../output/zonesmoothed_5x5_mean2.png",
-       width = 3, 
-       height = 4)
+mean_map5
+
+
 ```
+
+
+```{r smoothing as  5x 5 min raster}
+
+
+zone_s_5min = zone_df %>%
+  dplyr::select(cluster) %>%
+  # Transforming from polygon to point
+  st_cast("POINT") %>%
+  # Transforming from geometry to xy (needed by the focal function)
+  st_sfc2xy() %>%
+  # Transforming from point (vector) to raster
+  st_as_stars() %>%
+  # Applying focal filter
+  focal2(w = matrix(1,5,5),
+         fun = "min") %>%
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+  # Interpolating to fill to boundary
+  gstat(formula = cluster ~ 1,
+        data = .) %>%
+  predict(grid_r) %>%
+
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+
+  # Rounding  
+  mutate(cluster_f = round(var1.pred, 0)) %>%
+  # Adjusting cluster id from numeric to factor
+  mutate(cluster_f = factor(cluster_f)) %>%
+  st_intersection(boundary_w)
+
+zone_s_5min
+
+
+```
+
+```{r 5x5 min smoothed plot}
+min_map5 = zone_s_5min %>%
+  ggplot()+
+  geom_sf(aes(fill = cluster_f),
+          color = NA) +
+  geom_sf(data = boundary_w, fill=NA,
+          linewidth = 1)+
+  scale_fill_colorblind()+
+  labs(title="5x5, Min")+
+  theme_map()+
+  theme(plot.title = element_text(color="blue")) +
+  mytheme_map
+
+min_map5
+```
+
+
+```{r smoothing as 5 x 5 max raster}
+
+
+zone_s_5max = zone_df %>%
+  dplyr::select(cluster) %>%
+  # Transforming from polygon to point
+  st_cast("POINT") %>%
+  # Transforming from geometry to xy (needed by the focal function)
+  st_sfc2xy() %>%
+  # Transforming from point (vector) to raster
+  st_as_stars() %>%
+  # Applying focal filter
+  focal2(w = matrix(1,5,5),
+         fun = "max") %>%
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+  # Interpolating to fill to boundary
+  gstat(formula = cluster ~ 1,
+        data = .) %>%
+  predict(grid_r) %>%
+
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+
+  # Rounding  
+  mutate(cluster_f = round(var1.pred, 0)) %>%
+  # Adjusting cluster id from numeric to factor
+  mutate(cluster_f = factor(cluster_f)) %>%
+  st_intersection(boundary_w)
+
+zone_s_5max
+
+
+```
+
+```{r 5x5 max smoothed plot}
+max_map5 = zone_s_5max %>%
+  ggplot()+
+  geom_sf(aes(fill = cluster_f),
+          color = NA) +
+  geom_sf(data = boundary_w, fill=NA,
+          linewidth = 1)+
+  scale_fill_colorblind()+
+  labs(title="5x5, Max")+
+  theme_map()+
+  theme(plot.title = element_text(color="blue")) +
+  mytheme_map
+
+max_map5
+```
+
+```{r combining 5x5 maps}
+mean_map5 + min_map5 + max_map5 +
+  plot_layout(ncol = 3) +
+  plot_annotation(title = "5 x 5 Smoothed Maps",
+    theme = theme(
+      plot.title = element_text(size = 13, face = "bold", hjust = 0.5)))
+
+ggsave("../output/5x5_maps.png",
+       width = 15,
+       height = 5)
+
+```
+
+
+## 7 x 7
+
+
+```{r smoothing as 7 x 7 mean raster}
+
+zone_s_7m = zone_df %>%
+  dplyr::select(cluster) %>%
+  # Transforming from polygon to point
+  st_cast("POINT") %>%
+  # Transforming from geometry to xy (needed by the focal function)
+  st_sfc2xy() %>%
+  # Transforming from point (vector) to raster
+  st_as_stars() %>%
+  # Applying focal filter
+  focal2(w = matrix(1,7,7),
+         fun = "mean") %>%
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+  # Interpolating to fill to boundary
+  gstat(formula = cluster ~ 1,
+        data = .) %>%
+  predict(grid_r) %>%
+
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+
+  # Rounding  
+  mutate(cluster_f = round(var1.pred, 0)) %>%
+  # Adjusting cluster id from numeric to factor
+  mutate(cluster_f = factor(cluster_f)) %>%
+  st_intersection(boundary_w)
+
+zone_s_7m
+
+
+```
+
+```{r 7x7 mean smoothed plot}
+mean_map7 = zone_s_7m %>%
+  ggplot()+
+  geom_sf(aes(fill = cluster_f),
+          color = NA) +
+  geom_sf(data = boundary_w, fill=NA,
+          linewidth = 1)+
+  scale_fill_colorblind()+
+  labs(title="7x7, Mean")+
+  theme_map()+
+  theme(plot.title = element_text(color="blue")) +
+  mytheme_map +
+  annotation_scale(location = "bl",
+                   width_hint = 0.3,
+                   pad_x = unit(0.1, "in"),
+                   pad_y = unit(0.01, "in")) +
+  annotation_north_arrow(location = "tl",
+                       pad_x = unit(0.1, "in"),
+                       pad_y = unit(0.05, "in"),
+                       height = unit(0.4, "in"),
+                       width = unit(0.4, "in"),
+                       style = north_arrow_fancy_orienteering())
+  
+
+mean_map7
+
+
+```
+
+
+```{r smoothing as 7 x 7 min raster}
+
+
+zone_s_7min = zone_df %>%
+  dplyr::select(cluster) %>%
+  # Transforming from polygon to point
+  st_cast("POINT") %>%
+  # Transforming from geometry to xy (needed by the focal function)
+  st_sfc2xy() %>%
+  # Transforming from point (vector) to raster
+  st_as_stars() %>%
+  # Applying focal filter
+  focal2(w = matrix(1,7,7),
+         fun = "min") %>%
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+  # Interpolating to fill to boundary
+  gstat(formula = cluster ~ 1,
+        data = .) %>%
+  predict(grid_r) %>%
+
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+
+  # Rounding  
+  mutate(cluster_f = round(var1.pred, 0)) %>%
+  # Adjusting cluster id from numeric to factor
+  mutate(cluster_f = factor(cluster_f)) %>%
+  st_intersection(boundary_w)
+
+zone_s_7min
+
+
+```
+
+```{r 7x7 min smoothed plot}
+min_map7 = zone_s_7min %>%
+  ggplot()+
+  geom_sf(aes(fill = cluster_f),
+          color = NA) +
+  geom_sf(data = boundary_w, fill=NA,
+          linewidth = 1)+
+  scale_fill_colorblind()+
+  labs(title="7x7, Min")+
+  theme_map()+
+  theme(plot.title = element_text(color="blue")) +
+  mytheme_map
+
+min_map7
+```
+
+
+```{r smoothing as 7 x 7 max raster}
+
+
+zone_s_7max = zone_df %>%
+  dplyr::select(cluster) %>%
+  # Transforming from polygon to point
+  st_cast("POINT") %>%
+  # Transforming from geometry to xy (needed by the focal function)
+  st_sfc2xy() %>%
+  # Transforming from point (vector) to raster
+  st_as_stars() %>%
+  # Applying focal filter
+  focal2(w = matrix(1,7,7),
+         fun = "max") %>%
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+  # Interpolating to fill to boundary
+  gstat(formula = cluster ~ 1,
+        data = .) %>%
+  predict(grid_r) %>%
+
+  # Transforming from raster back to vector
+  st_as_sf() %>%
+
+  # Rounding  
+  mutate(cluster_f = round(var1.pred, 0)) %>%
+  # Adjusting cluster id from numeric to factor
+  mutate(cluster_f = factor(cluster_f)) %>%
+  st_intersection(boundary_w)
+
+zone_s_7max
+
+
+```
+
+```{r 7x7 max smoothed plot}
+max_map7 = zone_s_7max %>%
+  ggplot()+
+  geom_sf(aes(fill = cluster_f),
+          color = NA) +
+  geom_sf(data = boundary_w, fill=NA,
+          linewidth = 1)+
+  scale_fill_colorblind()+
+  labs(title="7x7, Max")+
+  theme_map()+
+  theme(plot.title = element_text(color="blue")) +
+  mytheme_map
+
+max_map7
+```
+
+
+```{r combining 7x7 maps}
+mean_map7 + min_map7 + max_map7 +
+  plot_layout(ncol = 3) +
+  plot_annotation(title = "7 x 7 Smoothed Maps",
+    theme = theme(
+      plot.title = element_text(size = 13, face = "bold", hjust = 0.5)))
+
+ggsave("../output/7x7_maps.png",
+       width = 15,
+       height = 5)
+
+```
+
+## Final smoothed map cluster
+```{r map of final smoothed cluster/zone}
+mean_map7 +
+  plot_annotation(title = "Final Smoothed Zone Map: 7 x 7 Mean",
+    theme = theme(
+      plot.title = element_text(size = 13, face = "bold", hjust = 0.5)))
+
+ggsave("../output/final7x7_mean_map.png",
+       width = 8,
+       height = 5)
+  
+
+
+```
+
+
 
 How are clusters affected by the variables used to create them?  
 
 ```{r}
-zone_s_df = zone_s %>%
+zone_s_df = zone_s_7m %>%
   st_join(all_v,
           join = st_equals,
           left = T) %>%
@@ -397,10 +951,11 @@ zone_s_df %>%
 ```
 
 
+
 ```{r cluster x variable boxplots}
 zone_s_df %>%
-  dplyr::select(-stclass) %>%
-  pivot_longer(cols = elev_m:eca90_dsm) %>%
+  dplyr::select(-stclass, -ph_class, -klbac_class, -plbac_class) %>%
+  pivot_longer(cols = elev_m:k_lbac) %>%
   ggplot(aes(x=cluster_f, y=value, color=cluster_f))+
   geom_boxplot(show.legend = F)+
   scale_color_colorblind()+
@@ -428,7 +983,7 @@ Ok, so we have 2 clusters that are significantly different based on the variable
 
 ```{r clusters and standardized yield}
 zone_s_df %>%
-  pivot_longer(cols = sy17:sy20) %>%
+  pivot_longer(cols = sy16c:sy24c) %>%
   ggplot(aes(x=cluster_f, y=value, color=cluster_f))+
   geom_boxplot(show.legend = F)+
   scale_color_colorblind()+

@@ -231,7 +231,20 @@ read_rds("../output/stab-class_prop.rds")
 
 ## 10. Use all interpolated field-related variables (soil P, K, pH, soil EC at two depths, soil terrain properties) to create zones. How many clusters/zones did you decide that this field needs? What metric did you use to make this decision? (check the `Code tips` section below for a note on this).  
 
+2 clusters and it was the best based on running the analysis.
+
 ## 11. When smoothing clusters, play around with a few matrix sizes (3x3, 5x5, 7x7) and summarizing functions (mean, median, maximum), then choose one option to continue. Show maps for all combinations of window size and summarizing function. After experimenting with them, which matrix size and summarizing function did you decide to keep? Why? Show Mr. McCormick a map of the final smoothed clusters/zones below (include field boundary).  
+
+![](../output/3x3_maps.png)
+
+
+![](../output/5x5_maps.png)
+
+
+![](../output/7x7_maps.png)
+
+
+![](../output/final7x7_mean_map.png)
 
 ## 12. Use the standardized mean yield (calculated on the spatial-temporal stability analysis) data to validate the clusters. Show below a boxplot of standardized yield data mean for all years for the different clusters. Based on these boxplots, how would you characterize each cluster (e.g., cluster x is high yielding zone and cluster y is low yielding zone). **Extra credit**: include the analysis of variance letter separation on the boxplots.   
 

@@ -1,0 +1,283 @@
+---
+author: "Comfort Adegbenro"
+title: "Zone-based Variable rate nitrogen prescription"
+output: html_document
+---
+
+#   Objectives  
+The learning objectives for this exercise are to:  
+  - Learn where to find crop-specific nutrient recommendations  
+  - Understand what information is needed to recommend N in cotton   
+  - Estimate zone-specific cotton yield potential  
+  - Calculate zone-specific total N recommendation 
+  - Calculate zone-specific side-dress variable N rate recommendation  
+  - Calculate total amount of fertilizer to order  
+  - Export recommendation to file to be used in a variable rate controller  
+
+# Introduction  
+We are going to create a recommendation to apply variable rate nitrogen (N) fertilizer in **corn**, with a **different in-season side-dress rate** for each zone.    
+
+> How do we know how much N corn needs (or really, how do we know how much of any given nutrient any crop needs)?  
+
+# Setup  
+```{r setup}
+# Packages
+library(dplyr)
+library(tidyr)
+library(readr)
+library(sf) #vector manipulation
+library(ggplot2)
+library(viridis)
+library(ggthemes)
+
+```
+
+```{r defining map theme}
+mytheme_map <- 
+  theme_map()+
+  theme(legend.position = "bottom",
+        legend.direction = "vertical",
+        panel.background = element_rect(fill="white",
+                                        color=NA),
+        plot.background = element_rect(fill="white",
+                                       color=NA),
+        legend.title = element_text(size=10),
+        legend.text = element_text(size=9),
+        plot.margin = margin(5, 10, 5, 10))
+
+```
+
+
+```{r y16_corn}
+y16_ip_corn = read_sf("../data/y16_corn_ip.geojson") 
+  
+y16_ip_corn
+
+summary(y16_ip_corn)
+
+boundary = read_sf("../data/50ac/boundary/BackFieldPivot.shp") %>%
+  st_transform(crs = 6345)
+```
+
+
+```{r zone_st}
+zone_st = read_sf("../data/zone_s.geojson") %>%
+  dplyr::select(zone, geometry)
+
+summary(zone_st)
+```
+
+# Wrangling  
+```{r Merging yield and zones}
+zone_yield <- zone_st %>%
+  st_join(y16_ip_corn,
+          join = st_nearest_feature, 
+          left = T
+  )
+
+summary(zone_yield)
+
+ggplot() +
+  geom_sf(data = zone_yield,
+          aes(fill = zone))
+
+```
+
+# VRN  
+Below, we will
+- Calculate zone-specific yield potential (as the 90% quantile of the yield distribution of only the 2016 corn year)  
+
+- Calculate the total N rate (lbs N/ac) needed with **UGFertex**
+- Adjust it in +25% assuming that we are following cotton  
+- Adjust it in 2/3 to be applied side-dress (1/3 applied at planting)  
+- Define our N source as urea-ammonium nitrate (UAN) 28% N  
+- Calculate the total product rate (gal UAN/ac)  
+
+```{r zone yield potential}
+zone_yield %>%
+  ggplot(aes(x = corn_ipyield_buac, fill = zone))+
+  geom_density(alpha = .6) 
+
+```
+
+```{r yield potential by zone}
+yp_zone = zone_yield %>%
+  group_by(zone) %>%
+  summarize(yieldpotential = quantile(corn_ipyield_buac, 0.9, na.rm = TRUE)) %>%
+  st_drop_geometry()
+write_csv(yp_zone, "../output/yp_zone.csv")
+
+yp_zone
+
+```
+
+
+```{r vrn calculation }
+vrn = zone_yield %>%
+  group_by(zone) %>%
+  summarize(yieldpotential = quantile(corn_ipyield_buac, 0.9, na.rm = TRUE)) %>%
+  
+    # Stop here, include these on plot above
+
+  # Go on UGFertex and enter these yield potential values, assuming cotton as previous crop, irrigated, coastal plain soil. What total N did you get for zone high yield? What about zone low yield?
+  
+  # We can also calculate those using the formula below, which is the formula used behind the scenes on UGFertex:
+  mutate(totalnrate_lbsac = yieldpotential*1.2) %>% 
+ # Calculate pre-plant rate
+  mutate(pp_totalnrate_adj_lbsac = totalnrate_lbsac * 0.30) %>%
+  # Calculate ~30% as portion to be applied in-season (Assuming a single pre-plant rate was applied to both zones)
+  mutate(is_totalnrate_lbsac = round(totalnrate_lbsac - 72.5, 1)) %>%
+  # Calculate product rate when using UAN solution 28% N
+  # UAN 28% has 3 lbs N per gallon of product (see chunk below)
+  mutate(uanrate_galac = round(is_totalnrate_lbsac/3, 1))
+
+vrn
+
+write_csv(vrn %>%
+            st_drop_geometry(), "../output/total_nrate.csv")
+
+```
+UAN is a liquid fertilizer, so how do we go from volume of solution to lbs of N?  
+
+> What information do we need?  
+
+
+
+
+
+
+
+
+
+
+We can find this information on the fertilizer label/msds information from manufacturer.  
+
+Normally, UAN 28% density is 10.67 lbs/gal, as we can find from these retailers:  
+- https://www.agricocanada.com/wp-content/uploads/2016/09/agric-101-SDS_Urea-Ammonium-Nitrate-UAN-Solution.pdf  
+-  https://www.cfindustries.com/globalassets/cf-industries/media/documents/safety-data-sheets/uan---north-america/urea_ammonium_nitrate_solution_uan_sds.pdf  
+
+NOTE: UAN is normally sold as 28, 30, or 32%N. Each of them has a different density!  
+
+
+```{r UAN volume to mass of N}
+uan28density_lbsgal <- 10.67
+
+uan28Nconc_pct <- 0.28
+
+uan28_lbsNgal <- uan28density_lbsgal * uan28Nconc_pct
+
+uan28_lbsNgal #~3 lbs N/gal of UAN28%
+
+```
+
+How much UAN28% do we need to have delivered at the field to ensure enough product for application?  
+
+```{r total volume of UAN per area}
+vrn %>%
+  mutate(area_m2 = st_area(.)) %>%
+  mutate(area_ac = as.numeric(area_m2/4047)) %>%
+
+  # Will ask for 20% more than recommended to have a bit extra 
+  mutate(uan_gal = (uanrate_galac*area_ac)*1.2) %>%
+  summarize(totaluan_gal = sum(uan_gal))
+
+```
+
+# Rx map  
+```{r vrn vector}
+vrn_v = zone_yield %>%
+  left_join(vrn %>%
+              st_drop_geometry())
+
+vrn_v
+```
+
+```{r in-season N rate vrn plot}
+vrn_v %>%
+  mutate(is_totalnrate_lbsac = factor(is_totalnrate_lbsac)) %>%
+  ggplot()+
+  geom_sf(aes(fill = is_totalnrate_lbsac,
+              color = is_totalnrate_lbsac)) +
+  scale_fill_colorblind() +
+  scale_color_colorblind() +
+  geom_sf(data = boundary, fill = NA,
+          linewidth = 1) +
+  labs(title="VRN Rx - In-season N rate",
+       fill="N rate\n(lb N/ac)",
+       color="N rate\n(lb N/ac)")+
+  mytheme_map +
+  annotation_scale(location = "bl",
+                   width_hint = 0.3,
+                   pad_x = unit(0.1, "in"),
+                   pad_y = unit(0.01, "in")) +
+  annotation_north_arrow(location = "tl",
+                       pad_x = unit(0.1, "in"),
+                       pad_y = unit(0.05, "in"),
+                       height = unit(0.4, "in"),
+                       width = unit(0.4, "in"),
+                       style = north_arrow_fancy_orienteering()) +
+  theme(plot.title = element_text(size = 13, face = "bold", hjust = 0.5))
+
+
+ggsave("../output/inseason-Nrate-vrn.png",
+      width = 6, 
+       height = 4
+       )  
+```
+
+
+```{r UAN vrn plot}
+vrn_v %>%
+  mutate(uanrate_galac=factor(uanrate_galac)) %>%
+  ggplot()+
+  geom_sf(aes(fill = uanrate_galac,
+              color = uanrate_galac)) +
+  geom_sf(data = boundary, fill = NA,
+          linewidth = 1) +
+  labs(title="VRN Rx - UAN 28% rate",
+       fill="UAN rate\n(gal/ac)",
+       color="UAN rate\n(gal/ac)")+
+  mytheme_map +
+  annotation_scale(location = "bl",
+                   width_hint = 0.3,
+                   pad_x = unit(0.1, "in"),
+                   pad_y = unit(0.01, "in")) +
+  annotation_north_arrow(location = "tl",
+                       pad_x = unit(0.1, "in"),
+                       pad_y = unit(0.05, "in"),
+                       height = unit(0.4, "in"),
+                       width = unit(0.4, "in"),
+                       style = north_arrow_fancy_orienteering())+
+  theme(plot.title = element_text(size = 13, face = "bold", hjust = 0.5))
+
+
+
+ggsave("../output/UAN-vrn.png",
+      width = 6, 
+       height = 4
+       )  
+```
+
+# Exporting  
+We are going to export as **shapefile** as it is the most commonly accepted format in variable rate controllers.  
+
+Since we are exporting as shapefile, let's create a sub-folder inside `output` called `VRN` to have all the associated files saved together.  
+
+```{r exporting}
+vrn_v %>%
+  dplyr::select(zone, is_totalnrate_lbsac, uanrate_galac) %>%
+  write_sf("../output/vrn.shp",
+           delete_dsn = T)
+```
+
+# Summary  
+In summary, today we:  
+- Understood where to look for information on crop and nutrient-specific recommendations  
+- Defined yield potential for each zone  
+- Calculated VRN in both lbs N/ac and gallons UAN38/ac  
+- Exported VRN Rx as a shapefile  
+
+
+
+
+

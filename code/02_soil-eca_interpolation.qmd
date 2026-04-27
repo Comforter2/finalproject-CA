@@ -191,7 +191,7 @@ eca90_map <- ggplot()+
   scale_fill_viridis_c(na.value = "white") +
   geom_sf(data = boundary_w, fill = NA,
           linewidth = 1) +
-  labs(title = "ECa (shallow)",
+  labs(title = "ECa (deep)",
        fill="ECa\n0-90 cm\n(dS/m)")+
   mytheme_map
 

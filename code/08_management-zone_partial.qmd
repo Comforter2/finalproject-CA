@@ -1000,6 +1000,158 @@ zone_s_df %>%
 
 ```
 
+```{r sy anova and letter separation}
+library(emmeans)
+library(multcomp)
+library(purrr)
+library(car)
+library(multcompView)
+
+anovas_sy <- zone_s_df %>%
+  pivot_longer(cols = sy16c:sy24c) %>%
+  group_by(name) %>%
+  nest() %>%
+  mutate(mod = map(data,
+                   ~lm(data = .x,
+                       formula = value ~ cluster_f
+                   )
+  )) %>%
+  mutate(anova = map(mod,
+                     ~Anova(.x))) %>%
+  mutate(cld = map(mod,
+                   ~emmeans(.x, ~cluster_f) %>%
+                     cld(reversed = T, 
+                         alpha = .05,
+                         Letter = letters) %>%
+                     as.data.frame() %>%
+                     mutate(letter = trimws(.group))
+  )) %>%
+  unnest(cld) %>%
+  ungroup() %>%
+  mutate(name = factor(name,
+                       levels = c("sy16c",
+                                  "sy17s",
+                                  "sy23c",
+                                  "sy24c")))
+
+
+anovas_sy
+
+```
+
+```{r sy boxplot and labels}
+zone_s_df %>%
+  pivot_longer(cols = sy16c:sy24c) %>%
+  mutate(name = factor(name,
+                       levels = c("sy16c",
+                                  "sy17s",
+                                  "sy23c",
+                                  "sy24c")
+  )) %>%
+  ggplot(aes(x=cluster_f, y = value))+
+  geom_boxplot(aes(fill = cluster_f))+
+  facet_wrap(~name, scales = "free_y",
+             labeller = as_labeller(c(sy16c = "2016 Corn",
+                                      sy17s = "2017 Soybeans",
+                                      sy23c = "2023 Cotton",
+                                      sy24c = "2024 Cotton"))) +
+  geom_label(data = anovas_sy,
+             aes(x = cluster_f,
+                 y = emmean,
+                 label = letter))+
+  scale_fill_viridis_d(option="D")+
+  theme(axis.text.x = element_text(angle = 0,
+                                   hjust = 1),
+        legend.position = "none"
+       ) +
+  labs(x = "Cluster", y = "Standardized Yield") 
+
+ggsave("../output/sy_validate.png",
+       width = 10,
+       height = 6)
+
+```
+
+
+
+```{r soil-terrain anova and letter separation}
+anovas_soil_terrain <- zone_s_df %>%
+  dplyr::select(-ph_class, -plbac_class, -slope) %>%
+  pivot_longer(cols = elev_m:k_lbac) %>%
+  group_by(name) %>%
+  nest() %>%
+  mutate(mod = map(data,
+                   ~lm(data = .x,
+                       formula = value ~ cluster_f
+                   )
+  )) %>%
+  mutate(anova = map(mod,
+                     ~Anova(.x))) %>%
+  mutate(cld = map(mod,
+                   ~emmeans(.x, ~cluster_f) %>%
+                     cld(reversed = T, 
+                         alpha = .05,
+                         Letter = letters) %>%
+                     as.data.frame() %>%
+                     mutate(letter = trimws(.group))
+  )) %>%
+  unnest(cld) %>%
+  ungroup() %>%
+  mutate(name = factor(name,
+                       levels = c("elev_m",
+                                  "ph",
+                                  "p_lbac",
+                                  "k_lbac",
+                                  "eca30_dsm",
+                                  "eca90_dsm")))
+
+
+anovas_soil_terrain
+
+```
+
+```{r soil-terrain boxplot and labels}
+zone_s_df %>%
+  dplyr::select(-ph_class, -plbac_class, -slope) %>%
+  pivot_longer(cols = elev_m:k_lbac) %>%
+  mutate(name = factor(name,
+                       levels = c("elev_m",
+                                  "ph",
+                                  "p_lbac",
+                                  "k_lbac",
+                                  "eca30_dsm",
+                                  "eca90_dsm")
+  )) %>%
+  ggplot(aes(x=cluster_f, y = value))+
+  geom_boxplot(aes(fill = cluster_f))+
+  facet_wrap(~name, scales = "free_y",
+             labeller = as_labeller(c(elev_m = "Elevation (m)",
+                                      ph = "Soil pH",
+                                      p_lbac = "Phosphorus (lb/ac)",
+                                      k_lbac = "Potassium (lb/ac)",
+                                      eca30_dsm = "ECa shallow",
+                                      eca90_dsm = "ECa deep"))) +
+  geom_label(data = anovas_soil_terrain,
+             aes(x = cluster_f,
+                 y = emmean,
+                 label = letter))+
+  scale_fill_viridis_d(option="D")+
+  theme(axis.text.x = element_text(angle = 0,
+                                   hjust = 1),
+        legend.position = "none"
+       ) +
+  labs(x = "Cluster", y = "Soil and Terrain Variables") 
+
+ggsave("../output/soil-terrain_clust.png",
+       width = 10,
+       height = 6)
+
+summary(zone_s_df)
+
+```
+
+
+
 ```{r clusters and mean yield and cv }
 zone_s_df %>%
   pivot_longer(cols = c(mean_pixel, cv_pixel)) %>%
@@ -1031,7 +1183,12 @@ zone_s_df %>%
   scale_fill_colorblind()+
   facet_grid(~stclass )+
   geom_text(aes(label=paste0(prop,"%"), y=prop+5))+
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  labs(x = "Cluster", y = "Proportion") 
+
+ggsave("../output/prop_stclass_clust.png",
+       width = 7,
+       height = 5)
 
 zone_s_df %>%
   count(stclass)

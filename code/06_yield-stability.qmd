@@ -427,6 +427,8 @@ pix_prop = sy_all_class %>%
 pix_prop
 write_rds(pix_prop, "../output/stab-class_prop.rds")
 
+summary(sy_all_class)
+
 ```
 
 # Exporting  

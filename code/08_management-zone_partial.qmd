@@ -939,8 +939,9 @@ How are clusters affected by the variables used to create them?
 
 ```{r}
 zone_s_df = zone_s_7m %>%
+  dplyr::select(-var1.var) %>%
   st_join(all_v,
-          join = st_equals,
+          join = st_nearest_feature,
           left = T) %>%
   dplyr::select(-flowdir, -aspect)
 
@@ -948,6 +949,10 @@ zone_s_df
 
 zone_s_df %>%
   summary
+
+nrow(zone_s_df) == nrow(zone_s_7m)
+
+summary(zone_s_7m)
 ```
 
 
@@ -1009,7 +1014,7 @@ zone_s_df %>%
 
 ```
 
-It seems like cluster 2 has higher CV and lower yield, and cluster 1 has lower CV and greater yield.  
+It seems like cluster 1 has higher CV and lower yield, and cluster 2 has lower CV and greater yield.  
 
 ```{r contingency table}
 zone_s_df %>%
@@ -1028,32 +1033,22 @@ zone_s_df %>%
   geom_text(aes(label=paste0(prop,"%"), y=prop+5))+
   theme(legend.position = "none")
 
+zone_s_df %>%
+  count(stclass)
+
+summary(zone_s_df)
+
 ```
 
-I suppose we can call cluster 1 as high yield and cluster 2 as lower yield, right?  
+I suppose we can call cluster 2 as high yield and cluster 1 as lower yield, right?  
 
 # Exporting clusters  
 ```{r exporting clusters}
 zone_s_df %>%
-  mutate(zone = ifelse(cluster_f == "1",
+  mutate(zone = ifelse(cluster_f == "2",
                       "high",
                       "low")) %>%
   write_sf("../data/zone_s.geojson",
            delete_dsn = T)
 ```
 
-# Summary  
-Today we:  
-- Learned about the k-means algorithm  
-- Found the best k for our data set  
-- Created k=2 zones  
-- Explored the main zone drivers  
-- Validated zones with yield spatial-temporal stability areas  
-- Explored the main yield stability drivers  
-
-# Next steps  
-To wrap up this entire exercise, the next steps will be to:  
-- decide how to handle spatial-temporal stability  
-- create zone-specific variable rate recommendations  
-
-# Assignment  

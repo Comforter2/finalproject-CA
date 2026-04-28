@@ -173,24 +173,24 @@ Once you get started and as you progress in the project tasks, Mr. McCormick is 
 
 ## 1. Show a map of the interpolated soil gridded variables of P, K, and pH. Provide an interpretation. On your color legend, use the color brakes according to sufficiency levels for corn.  
 ![](../output/soilph-p-k.png)
-For soil pH the entire field is Above Optimal (> 6.5) based on the UGA recommendations  for corn (https://aesl.ces.uga.edu/publications/soil/cropsheets.pdf). So it is suggested that no lime needed. Additionally, phosphorus level for the field is Mostly Very High (> 100 lb/ac) with some High patches. Hence, phosphorus fertilizer can be skipped or minimized. Lastly, potassium is also Mostly High (151–250 lb/ac) with small Medium spots, and a tiny bit of Very high (>250). A variable-rate K application targeting the Medium zones would be cost-effective.
+For soil pH the entire field is Above Optimal (> 6.5) based on the UGA recommendations  for corn (chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://grains.caes.uga.edu/content/dam/caes-subsite/grains/docs/corn/2023-Corn-Production-Guide.pdf). So it is suggested that no lime needed. Additionally, phosphorus level for the field is Mostly Very High (> 100 lb/ac) with some High patches. Hence, phosphorus fertilizer can be skipped or minimized. Lastly, potassium is also Mostly High (151–250 lb/ac) with small Medium spots, and a tiny bit of Very high (>250). A variable-rate K application targeting the Medium zones would be cost-effective. Sufficiency levels for P and K were obtained from this UGA document: (https://aesl.ces.uga.edu/publications/soil/cropsheets.pdf).
 
 ## 2. What is the number of observations, minimum, mean, maximum, and standard deviation for the **raw** yield data (in bu/ac)? Show Mr. McCormick a plot with the density distribution of the **raw** yield data for each year available. 
 
 ```{r}
 read_rds("../output/all_ys_raw_table.rds")
 ```
-The raw yield data shows clear outliers across most years. Corn (2016), soybeans (2017), and cotton (2023) all have minimums at or near zero and extreme maximum values. For example, 872 bu/ac for corn, 274 bu/ac for soybean (compared to mean), and 46,144 lb/ac for cotton in 2023 which are unrealistic.
+The raw yield data shows clear outliers across most years. Corn (2016), soybeans (2017), cotton (2023), and cotton (2024) all have minimums at or near zero and extreme maximum values. For example, 872 bu/ac for corn, 274 bu/ac for soybean (compared to mean), and 46,144 lb/ac for cotton in 2023 which are unrealistic.
 
 ![](../output/rawyield_densitiy_plots.png)
 
-The density plots confirm the raw data summary from the table above, showing tight peaks at realistic yields with long tails stretching far to the right. The 2024 cotton data is the cleanest, with a smooth bell-shaped distribution and an almost reasonable maximum of approximately 4,950 lb/ac. Overall, the raw data needs filtering before meaningful analysis and drawing proper conclusions.
+The density plots confirm the raw data summary from the table above, showing tight peaks at realistic yields with long tails stretching far to the right. The 2024 cotton data is the seems to potentially be the cleanest, with a smooth bell-shaped distribution and an almost reasonable maximum of approximately 4,950 lb/ac. Overall, the raw data still needs to be filtered first before further analysis.
 
 
 ## 3. How many meters of negative buffer did you use for this field? Was that enough to remove low yielding data points near the field border? Show Mr. McCormick a map with the field border, points colored by raw yield data from one of the years, and the buffer outline. 
 
 ![](../output/raw_corn_ymap_buffer.png)
-I used a 20 m negative buffer from the field boundary. The map shows the original boundary (black), the buffered boundary (orange), and the raw 2016 corn yield points. Most low-yielding points (purple) cluster just outside the orange buffer line — confirming the buffer captured the bulk of edge effects from headland turns and partial swaths. A few low-yielding points remain inside the buffer in the southern corners, but increasing the buffer further would remove too much usable data from this 50-acre field. The 20 m buffer was a reasonable balance between cleaning edge artifacts and preserving data.
+I used a 20 m negative buffer from the field boundary. The map above shows the original boundary (black), the buffered boundary (orange), and the raw 2016 corn yield points. Most low-yielding points (purple) are seen just outside the orange buffer line. This means that the buffer captured the bulk of edge effects. A few low-yielding points remain inside the buffer, but increasing the buffer further would remove too much usable data from this field, so further filtering options would be applied, based on min and max yield and speed. The 20 m buffer was a reasonable balance between cleaning edge effects and not losing the majority of our data.
 
 ## 4. What is the number of observations, minimum, mean, maximum, and standard deviation for the **cleaned** yield data (in bu/ac)? Show Mr. McCormick a plot with the density distribution of the **cleaned** yield data for each year.  
 
@@ -200,15 +200,15 @@ read_rds("../output/all_ys_clean_table.rds")
 ```
 
 ![](../output/cleanyield_densitiy_plots.png)
-After cleaning, the four crop years showed clean, single-peaked distributions as seen above: 2016 corn (n=18,078, mean=188.6 bu/ac, SD=25.5), 2017 soybeans (n=11,926, mean=33.4 bu/ac, SD=3.7), 2023 cotton (n=11,333, mean=3,735.5 lb/ac, SD=601.2), and 2024 cotton (n=9,882, mean=3,363.4 lb/ac, SD=567.5). All distributions are approximately normal with mild right-skew, confirming the cleaning successfully removed yield monitor errors and produced reliable data for analysis.
+After cleaning, the four crop years showed clean, single-peaked distributions as seen above. All distributions are approximately normal with mild right-skew, confirming the cleaning was helpful in providing better and reliable data for analysis.
 
 ## 5. When creating a grid for interpolation, what grid cell size did you use? Why did you select this size?  
 
-I used a 5 × 5 m grid cell size for interpolation. This resolution matches the density of yield monitor data (which records every 1–3 m), aligns with the spatial precision of variable-rate application equipment (which adjusts over 5–10 m), and produces smooth maps without unnecessary computation. Using the same 5 m grid for all variables (yield, soil ECa, nutrients, terrain) ensures all layers align at the same resolution for clustering and zone analysis.
+I used a 5 × 5 m grid cell size for interpolation. I initially tried 10 × 10 m, but observed that some cells extended past the curved field boundary. Switching to 5 m helped to reduce this and make the grid fit closer to the field boundary. Using the same 5 m grid across all variables (yield, soil, terrain) also ensured all interpolated layers aligned at the same resolution.
 
 ## 6. Show Mr. McCormick a map of the cleaned interpolated yield data for each year (include the field boundary).  
 ![](../output/ip-yield_maps.png)
-Mr. McCormick, these are the cleaned, interpolated yield maps for your field across four crop years. 2016 corn averaged ~180–220 bu/ac uniformly. 2017 soybeans showed a high-yielding central band (~35 bu/ac) with lower yields at the edges. 2023 cotton showed a similar central high-yield band (~4,500–5,000 lb/ac). 2024 cotton showed the strongest east-vs-west pattern, with the eastern strip yielding noticeably lower (~2,500 lb/ac) than the rest of the field. The eastern edge consistently appears as the lowest-yielding zone across years, though the magnitude varies.
+These are the cleaned, interpolated yield maps for the field across four crop years. 2016 corn yield ranged between 150 to 200 bu/ac for most part of the field, with some parts showing yield of above 200 bu/ac. Very few points had yields below 150 bu/ac, or above 250 bu/ac. 2017 soybeans showed a high-yielding central band (~35 bu/ac or higher) with lower yields at the edges. 2023 cotton showed a similar high-yield across most of the field (~3,500–5,000 lb/ac). 2024 cotton showed the strongest east-vs-west pattern, with the eastern strip yielding noticeably lower (< 3,000 lb/ac) than the rest of the field. The eastern edge consistently appears as the lowest-yielding zone across years (except for corn), though the magnitude varies for other crops and years.
 
 ## 7. Create yield spatial-temporal variability classes using yield data from all available years. Include here the maps for standardized yield mean, coefficient of variation, and classes. What proportion of pixels were found within each class?  
 
@@ -220,7 +220,7 @@ Mr. McCormick, these are the cleaned, interpolated yield maps for your field acr
 ```{r}
 read_rds("../output/stab-class_prop.rds")
 ```
-Stability classes were created using standardized yield mean and CV across four crop years. The field is overwhelmingly medium-stable (96.3%), with small amounts of low-stable (2.9%), high-stable (0.6%), and unstable (0.3%) pixels. This confirms the field's uniform yield behavior across years, with limited spatial-temporal yield differentiation.
+Stability classes were created using standardized yield mean and CV across four crop years, specifically, thresholds of 90 and 110 for standardized yield mean, and 20 for CV across four years. These values were chosen based on the range of data mean and CV values. Classes were: high-stable (mean >= 110, CV ≤ 20), low-stable (mean <= 90, CV <= 20), medium-stable (mean 90–110, CV <= 20), and unstable (CV > 20).  The field is mostly medium-stable (96.3%), with small amounts of low-stable (2.9%), high-stable (0.6%), and unstable (0.3%) pixels. This suggests that the field is quite uniform with limited spatial-temporal variability.
 
 ## 8. Show Mr. McCormick a map of the interpolated terrain variables (include the field boundary).
 
@@ -328,6 +328,13 @@ I'd recommend a uniform rate of about 169 lb N/ac across the whole field. Splitt
 2640 gallons of UAN28% in total (including an extra 20%).
 
 ## 22. Download the growing-season mean GNDVI from Sentinel-2 for each year of yield data. For soybeans and corn, define the growing season dates as from May 1st through October 15. For cotton, define the growing season from June 1st through November 30. Use the growing-season mean GNDVI to create remote-sensing based spatial-temporal stability classes. Include here the map of the standardized mean GNDVI, CV, and of spatial-temporal classes. Also include here the previous yield-based spatial-temporal stability class map. How do they compare? How well did the remote sensing-based analysis compared to the yield-based analysis?   
+
+![](../output/GNDVI_sy-temp-stability.png)
+![](../output/gndvi-stclass-map.png)
+
+![](../output/yield-stability-map.png)
+Both yield-based and GNDVI-based stability classifications were performed using the same logic (mean and CV thresholds) but with thresholds adapted to each variable's distribution. Yield used 90/110 mean and 20 CV thresholds; GNDVI used 92/102 mean and 5 CV thresholds, reflecting the more compressed range of GNDVI values across the field.Both classifications agree the field is overwhelmingly medium-stable. However, the GNDVI map shows no low-stable pixels (zero) and concentrates high-stable areas in the central-eastern field, while the yield map identifies low-stable patches in the southwest, upper-north, and south-central areas. The GNDVI-based unstable pixels along the edges are likely satellite mixing artifacts rather than real instability. Overall, the remote-sensing analysis captured coarser field patterns but missed the finer-resolution low-yielding patches detected by yield monitor data. GNDVI is useful for early-season scouting, but yield monitor data remains more directly informative for management decisions.
+
 
 ## 23. **Extra credit** Tell me what was your most favorite part of this entire course. Explain in detail why.  
 

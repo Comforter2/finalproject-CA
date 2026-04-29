@@ -173,11 +173,20 @@ Once you get started and as you progress in the project tasks, Mr. McCormick is 
 
 ## 1. Show a map of the interpolated soil gridded variables of P, K, and pH. Provide an interpretation. On your color legend, use the color brakes according to sufficiency levels for corn.  
 ![](../output/soilph-p-k.png)
-For soil pH the entire field is Above Optimal (> 6.5) based on the UGA recommendations  for corn (chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://grains.caes.uga.edu/content/dam/caes-subsite/grains/docs/corn/2023-Corn-Production-Guide.pdf). So it is suggested that no lime needed. Additionally, phosphorus level for the field is Mostly Very High (> 100 lb/ac) with some High patches. Hence, phosphorus fertilizer can be skipped or minimized. Lastly, potassium is also Mostly High (151–250 lb/ac) with small Medium spots, and a tiny bit of Very high (>250). A variable-rate K application targeting the Medium zones would be cost-effective. Sufficiency levels for P and K were obtained from this UGA document: (https://aesl.ces.uga.edu/publications/soil/cropsheets.pdf).
+For soil pH the entire field is Above Optimal (> 6.5) based on the UGA recommendations  for corn:
+(<https://grains.caes.uga.edu/content/dam/caes-subsite/grains/docs/corn/2023-Corn-Production-Guide.pdf>). 
+So it is suggested that no lime needed. Additionally, phosphorus level for the field is Mostly Very High (> 100 lb/ac) with some High patches. Hence, phosphorus fertilizer can be skipped or minimized. Lastly, potassium is also Mostly High (151–250 lb/ac) with small Medium spots, and a tiny bit of Very high (>250). 
+A variable-rate K application targeting the Medium zones would be cost-effective. Sufficiency levels for P and K were obtained from this UGA document:
+(<https://aesl.ces.uga.edu/publications/soil/cropsheets.pdf>).
 
 ## 2. What is the number of observations, minimum, mean, maximum, and standard deviation for the **raw** yield data (in bu/ac)? Show Mr. McCormick a plot with the density distribution of the **raw** yield data for each year available. 
 
 ```{r}
+#| message: false
+#| warning: false
+#| echo: false
+
+library(tidyverse)
 read_rds("../output/all_ys_raw_table.rds")
 ```
 The raw yield data shows clear outliers across most years. Corn (2016), soybeans (2017), cotton (2023), and cotton (2024) all have minimums at or near zero and extreme maximum values. For example, 872 bu/ac for corn, 274 bu/ac for soybean (compared to mean), and 46,144 lb/ac for cotton in 2023 which are unrealistic.
@@ -196,6 +205,8 @@ I used a 20 m negative buffer from the field boundary. The map above shows the o
 
 The cleaned yield data summary statistics for each crop year are shown below:
 ```{r}
+#| echo: false
+
 read_rds("../output/all_ys_clean_table.rds")
 ```
 
@@ -218,6 +229,7 @@ These are the cleaned, interpolated yield maps for the field across four crop ye
 ![](../output/yield-stability-map.png)
 
 ```{r}
+#| echo: false
 read_rds("../output/stab-class_prop.rds")
 ```
 Stability classes were created using standardized yield mean and CV across four crop years, specifically, thresholds of 90 and 110 for standardized yield mean, and 20 for CV across four years. These values were chosen based on the range of data mean and CV values. Classes were: high-stable (mean >= 110, CV ≤ 20), low-stable (mean <= 90, CV <= 20), medium-stable (mean 90–110, CV <= 20), and unstable (CV > 20).  The field is mostly medium-stable (96.3%), with small amounts of low-stable (2.9%), high-stable (0.6%), and unstable (0.3%) pixels. This suggests that the field is quite uniform with limited spatial-temporal variability.
@@ -226,13 +238,13 @@ Stability classes were created using standardized yield mean and CV across four 
 
 ![](../output/ip-terrain_maps.png)
 
-The elevation map shows that the highest part (~61 m) is mostly at the center of the field, and the elevation reduces to the east and west part of the field. The overall elevation range across the field is about 5 meters. The slope map shows that most of the field is fairly flat (under 6%), with steeper areas (up to 12%) concentrated along the eastern edge where elevation drops off. The aspect map shows the direction each part of the field faces:  half of the field generally faces west or northwest (yellow), while the other portion mostly faces north or northeast (dark blue). The flow direction map shows how surface water would move across the field — water flows away from the central high ground toward multiple directions, with the majority flowing north, north east or east.
+The elevation map shows that the highest part (~61 m) is mostly at the center of the field, and the elevation reduces to the east and west part of the field. The overall elevation range across the field is about 5 meters. The slope map shows that most of the field is fairly flat (under 6%), with steeper areas (up to 12%) concentrated along the eastern edge where elevation drops off. The aspect map shows the direction each part of the field faces:  half of the field generally faces west or northwest (yellow), while the other portion mostly faces north or northeast (dark blue). The flow direction map shows how surface water would move across the field and the map shows that water flows away from the center toward multiple directions, with the majority flowing north, north east or east.
 
 
 ## 9. Show Mr. McCormick a map of the interpolated soil ECa variables (include the field boundary). 
 
 ![](../output/soileca.png)
-These maps show the electrical conductivity (ECa) at the topsoil depth (0–30 cm) and through the deep zone (0–90 cm). Most of this field has lower ECa (blue), but there's a strip along the eastern edge with higher conductivity (green/yellow). This pattern is observed in both the shallow and deep ECa maps.
+These maps show the electrical conductivity (ECa) at the topsoil depth (0-30 cm) and through the deep zone (0-90 cm). Most of this field has lower ECa (blue), but there's a strip along the eastern edge with higher conductivity (green/yellow). This pattern is observed in both the shallow and deep ECa maps.
 
 ## 10. Use all interpolated field-related variables (soil P, K, pH, soil EC at two depths, soil terrain properties) to create zones. How many clusters/zones did you decide that this field needs? What metric did you use to make this decision? (check the `Code tips` section below for a note on this).  
 
@@ -275,9 +287,10 @@ I would say this was validated partially. Standardized yield differences between
 ## 16. What was the yield potential (in bu/ac) of each zone? How did you determined it?   
 
 ```{r}
+#| message: false
+#| warning: false
+#| echo: false
 
-#|message: FALSE
-#|warning: FALSE
 read_csv("../output/yp_zone.csv",
          show_col_types = FALSE)
 ```
@@ -287,6 +300,10 @@ Yield potential was determined as the 90th percentile of cleaned and interpolate
 ## 17. How did you determine the total N rate (what algorithm, from which website)?  
 
 ```{r}
+#| message: false
+#| warning: false
+#| echo: false
+
 read_csv("../output/total_nrate.csv",
          show_col_types = FALSE)
 ```
@@ -294,8 +311,8 @@ Total N rate for high and low zones as seen above are 241.7 and 241.4 lbs N/ac, 
 
 I used the UGFERTEX and also an article by Glen Harris that gives the same value as the UGFERTEX where amount of nitrogen required should be 1.2  lb of nitrogen per bushel of corn planned to make (that is, the yield potential). Websites are seen below:
 
-https://site.extension.uga.edu/colquittag/2022/01/corn-fertilizer-use/
-https://aesl.ces.uga.edu/calculators/ugfertex/
+<https://site.extension.uga.edu/colquittag/2022/01/corn-fertilizer-use/>
+<https://aesl.ces.uga.edu/calculators/ugfertex/>
 
 
 ## 18. What was the in-season N rate (in lbs N/ac) of each zone? Show below a map with this information (include field boundary).  
@@ -334,11 +351,11 @@ Both yield-based and GNDVI-based stability classifications were performed using 
 
 ## 23. **Extra credit** Tell me what was your most favorite part of this entire course. Explain in detail why.  
 
-I liked the fact that there is a final project. It was helpful in helping me revisit concepts that were taught earlier, especially those I did not quite understand. It was also helpful in helping me to know why we did certain things, remembering some functions and libraries from consistent use, and most importantly, thinking like a consultant, and practicing the art of decision making making, while considering the needs of the farmer (Mr McCormick). More like translating data into useful information that the farmer can relate with. I also enjoyed having to troubleshoot whenever I got an error from running my codes.
+I liked the fact that there is a final project. It was helpful in helping me revisit concepts that were taught earlier, especially those I did not quite understand. It was also helpful in helping me to know why we did certain things, remembering some functions and libraries from consistent use, and most importantly, thinking like a consultant, and practicing the art of decision making making, while considering the needs of the farmer (Mr McCormick). More like translating data into useful information that the farmer can relate with. I also enjoyed having to troubleshoot whenever I got an error from running my codes, especially times when it was a simple mistake of not using the right variable name in a line of code.
 
 ## 24. **Extra credit** Tell me what was your least favorite part of this entire course. Explain in detail why.  
 
-My least favorite part was occasionally feeling like I was missing the underlying precision agriculture theory behind what we were doing, particularly with yield stability mapping and yield monitor data. The brief introductory explanations at the start of each topic were really helpful, but I would have benefited from a deeper theoretical foundation before the hands-on analysis. I would say this isn't exactly a limitation of the course since it was clear it's an applied class. The gap was on my end, and I plan to take or read into a course covering precision ag fundamentals so I can link the techniques I learned here.
+My least favorite part was occasionally feeling like I was missing the underlying precision agriculture theory behind what we were doing, particularly with yield stability mapping and yield monitor data. The brief introductory explanations at the start of each topic were really helpful, but I would have benefited from a deeper theoretical foundation before the hands-on analysis. I would say this isn't exactly a limitation of the course since it was clear from the beginning taht it is an applied class. The gap was on my end, and I plan to take or read into a course covering precision ag fundamentals so I can link the techniques I learned here.
 
 # E. Submitting and deadline  
 All I need is the rendered version of **this script**. 

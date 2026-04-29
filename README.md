@@ -19,9 +19,9 @@ recommendation for the next growing season.
 **Years analyzed:** 2016 (corn), 2017 (soybeans), 2023 (cotton), 2024 (cotton)  
 **Next crop planned:** Corn
 
-![](../output/ip-yield_maps.png)
+![](output/ip-yield_maps.png)
 
-![](../output/yield-stability-map.png)
+![](output/yield-stability-map.png)
 
 ## Workflow
 
@@ -102,9 +102,12 @@ Some tools and packages used are:
 
 ## Repository Structure
 .
-├── data/                  # Raw and intermediate spatial data
+├── data/               # Raw and intermediate spatial data
+
 ├── code/               # R scripts for each workflow step
-├── output/                # Generated maps, tables, and prescriptions                  
+
+├── output/             # Generated maps, tables, and prescriptions    
+
 └── README.md
 
 ## Acknowledgments

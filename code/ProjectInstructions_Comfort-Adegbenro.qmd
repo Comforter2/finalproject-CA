@@ -208,7 +208,7 @@ I used a 5 × 5 m grid cell size for interpolation. I initially tried 10 × 10 m
 
 ## 6. Show Mr. McCormick a map of the cleaned interpolated yield data for each year (include the field boundary).  
 ![](../output/ip-yield_maps.png)
-These are the cleaned, interpolated yield maps for the field across four crop years. 2016 corn yield ranged between 150 to 200 bu/ac for most part of the field, with some parts showing yield of above 200 bu/ac. Very few points had yields below 150 bu/ac, or above 250 bu/ac. 2017 soybeans showed a high-yielding central band (~35 bu/ac or higher) with lower yields at the edges. 2023 cotton showed a similar high-yield across most of the field (~3,500–5,000 lb/ac). 2024 cotton showed the strongest east-vs-west pattern, with the eastern strip yielding noticeably lower (< 3,000 lb/ac) than the rest of the field. The eastern edge consistently appears as the lowest-yielding zone across years (except for corn), though the magnitude varies for other crops and years.
+These are the cleaned, interpolated yield maps for the field across four crop years. 2016 corn yield ranged between 150 to 200 bu/ac for most part of the field, with some parts showing yield of above 200 bu/ac. Very few points had yields below 150 bu/ac, or above 250 bu/ac. 2017 soybeans showed a high-yielding central band (~35 bu/ac or higher) with lower yields at the edges. 2023 cotton showed a similar high-yield across most of the field (~3,500–5,000 lb/ac). 2024 cotton showed the strongest east-vs-west pattern, with the eastern strip yielding noticeably lower (< 3,000 lb/ac) than the rest of the field. 
 
 ## 7. Create yield spatial-temporal variability classes using yield data from all available years. Include here the maps for standardized yield mean, coefficient of variation, and classes. What proportion of pixels were found within each class?  
 
@@ -226,17 +226,16 @@ Stability classes were created using standardized yield mean and CV across four 
 
 ![](../output/ip-terrain_maps.png)
 
-The elevation map shows that the highest ground (~61 m) runs through the center of the field, with lower areas (~56 m) along the southern edge and the eastern strip — a total range of about 5 meters across the field. The slope map shows that most of the field is fairly flat (under 6%), with steeper areas (up to 12%) concentrated along the eastern edge where elevation drops off. The aspect map shows the direction each part of the field faces: the northern half tilts northward, while the southern half tilts southward, reflecting the central ridge running east-west across the field. The flow direction map shows how surface water would move across the field — water flows away from the central high ground toward both the northern and southern edges.
-The key takeaway: your field has a low ridge running through the middle, with gentle drainage to the north and south, and a steeper drop along the eastern edge. The eastern edge is the same area we identified as the more variable yield zone — its combination of heavier soil and steeper slope means it both drains differently and is more sensitive to weather extremes than the rest of the field.
+The elevation map shows that the highest part (~61 m) is mostly at the center of the field, and the elevation reduces to the east and west part of the field. The overall elevation range across the field is about 5 meters. The slope map shows that most of the field is fairly flat (under 6%), with steeper areas (up to 12%) concentrated along the eastern edge where elevation drops off. The aspect map shows the direction each part of the field faces:  half of the field generally faces west or northwest (yellow), while the other portion mostly faces north or northeast (dark blue). The flow direction map shows how surface water would move across the field — water flows away from the central high ground toward multiple directions, with the majority flowing north, north east or east.
+
 
 ## 9. Show Mr. McCormick a map of the interpolated soil ECa variables (include the field boundary). 
 
 ![](../output/soileca.png)
-Mr. McCormick, these maps show electrical conductivity (ECa) at the topsoil depth (0–30 cm) and through the full root zone (0–90 cm). Most of your field has lower ECa (blue), but there's a strip along the eastern edge with higher conductivity (green/yellow). This indicates heavier, more clay-rich soil along that eastern strip — which matches the more variable yield zone we identified in the analysis.
+These maps show the electrical conductivity (ECa) at the topsoil depth (0–30 cm) and through the deep zone (0–90 cm). Most of this field has lower ECa (blue), but there's a strip along the eastern edge with higher conductivity (green/yellow). This pattern is observed in both the shallow and deep ECa maps.
 
 ## 10. Use all interpolated field-related variables (soil P, K, pH, soil EC at two depths, soil terrain properties) to create zones. How many clusters/zones did you decide that this field needs? What metric did you use to make this decision? (check the `Code tips` section below for a note on this).  
 
-2 clusters and it was the best based on running the analysis (wss and sihoulette). i ran for multiple methods too and 2 was voted as the best.
 I decided that this field needs 2 clusters/zones. This was determined using both the within-cluster sum of squares (WSS, elbow method) and the silhouette score, which both indicated 2 clusters as optimal. I also ran the analysis with multiple clustering methods, determined using NbClust and 2 clusters was consistently selected as the best solution across them.
 
 ## 11. When smoothing clusters, play around with a few matrix sizes (3x3, 5x5, 7x7) and summarizing functions (mean, median, maximum), then choose one option to continue. Show maps for all combinations of window size and summarizing function. After experimenting with them, which matrix size and summarizing function did you decide to keep? Why? Show Mr. McCormick a map of the final smoothed clusters/zones below (include field boundary).  
@@ -248,33 +247,30 @@ I decided that this field needs 2 clusters/zones. This was determined using both
 
 
 ![](../output/7x7_maps.png)
-
+The 7×7 mean as seen below was selected as the final smoothing window because it produced clean, continuous zones suitable for variable-rate management. It removed isolated noise and rough boundary edges without losing the main pattern that was seen in the unsmoothed zone map. Smaller windows (3×3, 5×5) retained more patches, while min/max functions caused the result to lean toward one cluster.
 
 ![](../output/final7x7_mean_map.png)
-
-The 7×7 mean was selected as the final smoothing window because it produced clean, contiguous zones suitable for variable-rate management. It removed isolated noise and rough boundary edges while preserving the dominant pattern — a low-stability zone along the eastern edge and a stable zone across the western two-thirds. Smaller windows (3×3, 5×5) retained more speckle, while min/max functions biased the result toward one cluster. The 7×7 mean balanced noise reduction with meaningful feature preservation.
 
 ## 12. Use the standardized mean yield (calculated on the spatial-temporal stability analysis) data to validate the clusters. Show below a boxplot of standardized yield data mean for all years for the different clusters. Based on these boxplots, how would you characterize each cluster (e.g., cluster x is high yielding zone and cluster y is low yielding zone). **Extra credit**: include the analysis of variance letter separation on the boxplots.   
 
 ![](../output/sy_validate.png)
-Tukey HSD letter separation showed clusters differed significantly in 2016 corn, 2017 soybeans, and 2024 cotton, but not in 2023 cotton (both 'a'). Cluster 1 was slightly higher-yielding in 2016 and 2017 (1–2 percentage points), but Cluster 2 was higher-yielding in 2024 cotton by ~15 percentage points — the only year with a practically meaningful difference.
-Neither cluster is consistently high- or low-yielding across years. The clustering captures real yield variation, but its expression depends on crop and year, with the 2024 cotton year showing the clearest cluster differentiation.
+The anova results and letter separation showed clusters differed significantly in 2016 corn, 2017 soybeans, and 2024 cotton, but not in 2023 cotton (both 'a'). Cluster 1 was slightly higher-yielding in 2016 and 2017 (1- 2 percentage points), but Cluster 2 was higher-yielding in 2024 cotton by ~15 percentage points and this was the only year with a clearer difference between clusters.
+I do not think we can say any of the cluster is consistently high or low-yielding across years. The clustering captures real yield variation, but its expression depends on crop and year.
 
 ## 13. What was the proportion of high and low yield areas for each of the zones?  
 
 ![](../output/prop_stclass_clust.png)
 
-The plot shows the cluster distribution within each stability class. All high-stable pixels (100%) and the majority of low-stable (75%) and medium-stable (76%) pixels are in Cluster 2. Unstable pixels are roughly split, with a slight majority (54%) in Cluster 1.
-This suggests Cluster 2 captures the field's stable yielding areas, while Cluster 1 is enriched with the more variable, less predictable pixels.
+The plot shows the cluster distribution within each stability class. All high-stable pixels (100%) and the majority of low-stable (75%) and medium-stable (76%) pixels are in Cluster 2. Unstable pixels are roughly split, with a slight majority (54%) in Cluster 1. From this we can conclude that Cluster 2 captures the field's stable yielding areas, while Cluster 1 has more unstable pixels. In addition, since low, medium and high stable has majority of Cluster 2, it could mean most parts of this field are stable.
 
 ## 14. Now that we know the yield class of each cluster, how are they affected by soil P, K, pH, soil ECa at different depths, and by elevation (e.g., high yield cluster has higher/lower eca, etc.)? Include below a boxplot to explore those relationships similarly to how we did in class. **Extra credit**: include the analysis of variance letter separation on the boxplots.   
 
 ![](../output/soil-terrain_clust.png)
-Cluster 1 had higher ECa (both shallow and deep), higher K, lower P, and slightly lower elevation than Cluster 2. Soil pH did not differ between clusters (both ~7.78). The higher ECa values in Cluster 1 indicate heavier, more clay-rich soils with greater water retention, while Cluster 2's lower ECa points to lighter, better-drained soils on slightly higher ground. These soil and topographic differences explain why Cluster 2 (the stable yielding zone) maintained more consistent yields across years — its lighter soils and better drainage buffer it against weather variability — while Cluster 1's heavier soils make it more reactive to wet/dry conditions, producing the variable yield behavior.
+From the box plots above, we see that Cluster 1 had higher ECa (both shallow and deep), higher K, lower P, and slightly lower elevation than Cluster 2. Soil pH did not differ between clusters (both ~7.78), though the letter of separation shows that Cluster 1 has higher pH than Cluster 2. The higher ECa values in Cluster 1 indicate heavier, more clay-rich soils with greater water retention, while Cluster 2's lower ECa points to lighter, better-drained soils on slightly higher ground. These soil and topographic differences explain why Cluster 2 might be more stable compared to Cluster 1.
 
 ## 15. Were you able to validate clusters with temporal yield data? Explain why/why not.  
 
-Partially. Yield differences between clusters were statistically significant in three of four years, but the magnitude was small (1–2 percentage points) in 2016 and 2017, and the cluster rank reversed in 2024 (where Cluster 2 became higher-yielding by ~15 points). The 2023 cotton year showed no difference at all. The clusters did not behave as stable "high-yield" and "low-yield" zones across years. Soil and terrain analysis provided clearer validation, showing consistent differences in ECa, K, P, and elevation between clusters. The field's overall yield uniformity (max CV = 27%) likely limited the ability of any clustering to produce strong year-over-year yield separation.
+I would say this was validated partially. Standardized yield differences between clusters were statistically significant in three of four years, but the magnitude was quite small (1–2 percentage) in 2016 and 2017, and the cluster rank reversed in 2024 (where Cluster 2 became higher-yielding by about 15 percent). The 2023 cotton year showed no difference at all. The clusters did not behave as stable "high-yield" and "low-yield" zones across years. Soil and terrain analysis provided clearer validation, showing consistent differences in ECa, K, P, and elevation between clusters. The field's overall yield uniformity (max CV = 27%) could be a limitation in consistently identifying clusters that would separate yield for each year.
 
 ## 16. What was the yield potential (in bu/ac) of each zone? How did you determined it?   
 
@@ -285,7 +281,8 @@ Partially. Yield differences between clusters were statistically significant in 
 read_csv("../output/yp_zone.csv",
          show_col_types = FALSE)
 ```
-Yield potential was determined as the 90th percentile of cleaned 2016 corn yields within each cluster. I used 2016 corn data because corn is the crop to be planted next season, making it the most relevant year for setting upcoming yield goals. The 90th percentile is a standard yield-goal benchmark representing achievable yield under favorable conditions. Cluster 1 yielded 201.1 bu/ac and Cluster 2 yielded 201.5 bu/ac — essentially identical (0.3 bu/ac difference), confirming uniform yield potential across both zones.
+
+Yield potential was determined as the 90th percentile of cleaned and interpolated 2016 corn yields within each cluster. I used 2016 corn data because corn is the crop to be planted next season, making it the most relevant year for setting upcoming yield goals. The 90th percentile was used because it gives an estimate of achievable yield under favorable conditions. Cluster 1 (representing the low zone) yielded 201.1 bu/ac and Cluster 2 (high zone) yielded 201.5 bu/ac. Both yield potential are very identical (0.3 bu/ac difference), confirming uniform yield potential across both zones.
 
 ## 17. How did you determine the total N rate (what algorithm, from which website)?  
 
@@ -293,7 +290,7 @@ Yield potential was determined as the 90th percentile of cleaned 2016 corn yield
 read_csv("../output/total_nrate.csv",
          show_col_types = FALSE)
 ```
-
+Total N rate for high and low zones as seen above are 241.7 and 241.4 lbs N/ac, respectively.
 
 I used the UGFERTEX and also an article by Glen Harris that gives the same value as the UGFERTEX where amount of nitrogen required should be 1.2  lb of nitrogen per bushel of corn planned to make (that is, the yield potential). Websites are seen below:
 
@@ -304,10 +301,11 @@ https://aesl.ces.uga.edu/calculators/ugfertex/
 ## 18. What was the in-season N rate (in lbs N/ac) of each zone? Show below a map with this information (include field boundary).  
 
 ![](../output/inseason-Nrate-vrn.png)
-The in-season nitrogen rate for each zone was calculated based on the yield potential of each zone (Cluster 1 = 201.1 bu/ac, Cluster 2 = 201.5 bu/ac), using a standard N requirement of approximately 1 lb N per bushel of corn yield goal, adjusted for residual soil N and other credits.
+The in-season nitrogen rate for each zone are:
 - Cluster 1 (Low zone): 168.9 lb N/ac
 - Cluster 2 (High zone): 169.2 lb N/ac
-The two zones differ by only 0.3 lb N/ac — a difference too small to be agronomically or economically meaningful, and well below the spatial precision of variable-rate application equipment. This confirms that uniform N application would be appropriate for this field.
+This was obtained by subtracting the pre-plant nitrogen rate (30%  of total N) from the total nitrogen required.
+The two zones differ by only 0.3 lb N/ac which is very small to be agronomically or economically meaningful, meaning that uniform N application would be appropriate for this field.
 
 ## 19. What was the in-season UAN28% rate (in gal/ac) of each zone? Show below a map with this information (include field boundary).  
 
@@ -315,17 +313,15 @@ The two zones differ by only 0.3 lb N/ac — a difference too small to be agrono
 The N rate was converted from lb N/ac to gal/ac of UAN 28% solution using the standard conversion factor (UAN 28% contains approximately 3.0 lb N/gallon).
 - Cluster 1 (Low zone): 56.3 gal/ac
 - Cluster 2 (High zone): 56.4 gal/ac
-The two zones differ by only 0.1 gal/ac of UAN 28% — again, an agronomically and economically negligible difference. The conversion confirms what the N rate map already showed: variable-rate UAN application is not justified for this field.
+The two zones differ by only 0.1 gal/ac of UAN 28%, again, an agronomically and economically negligible difference. The conversion confirms what the N rate map already showed: variable-rate UAN application is not very much applicable for this field.
 
 ## 20. Based on the answers above, would you recommend Mr. McCormick to treat his field using variable rate N application? Why/why not? Explain as if you were speaking with him.  
 
-Mr. McCormick, I would not recommend variable-rate N for this field. The two zones would receive 168.9 vs 169.2 lb N/ac — a difference of just 0.3 lb/ac, which is smaller than any equipment can deliver and far too small to matter economically.
-Your field is unusually uniform. Four years of yield data showed low within-field variability, and the two zones produce very similar yields in most years. While we did find real soil texture differences between the zones, they haven't translated into different yield potentials.
-I'd recommend a uniform rate of about 169 lb N/ac across the whole field. Splitting it by zone would add complexity and cost without any agronomic benefit. Save variable-rate N for fields with greater yield differences between zones.
+I would not recommend variable-rate N for this field. The two zones would receive 56.3 vs 56.4 gal/ac of UAN 28%, which is a difference of just 0.1 lb/ac, and is really small to be economically significant. This field is quite uniform. Four years of yield data pooled together to obtain spatial-temporal stability, showed low within-field variability, and the two zones produce very similar yields in most years. While I did find real soil texture differences between the zones, they haven't translated into different yield potentials. I would therefore recommend a uniform rate of about 56.4 gal/ac of UAN 28% (~169 lb N/ac) across the whole field. Splitting it by zone would add complexity and cost without any agronomic benefit. 
 
 ## 21. Regardless of your recommendation above, Mr. McCormick will still need to apply N to this field. How many gallons of UAN28% would Mr. McCormick need to order for his in-season N application for this field?  
 
-2640 gallons of UAN28% in total (including an extra 20%).
+2640 gallons of UAN28% in total (including an extra 20%). This was calculated based on the field area (39 acres).
 
 ## 22. Download the growing-season mean GNDVI from Sentinel-2 for each year of yield data. For soybeans and corn, define the growing season dates as from May 1st through October 15. For cotton, define the growing season from June 1st through November 30. Use the growing-season mean GNDVI to create remote-sensing based spatial-temporal stability classes. Include here the map of the standardized mean GNDVI, CV, and of spatial-temporal classes. Also include here the previous yield-based spatial-temporal stability class map. How do they compare? How well did the remote sensing-based analysis compared to the yield-based analysis?   
 
@@ -333,13 +329,16 @@ I'd recommend a uniform rate of about 169 lb N/ac across the whole field. Splitt
 ![](../output/gndvi-stclass-map.png)
 
 ![](../output/yield-stability-map.png)
-Both yield-based and GNDVI-based stability classifications were performed using the same logic (mean and CV thresholds) but with thresholds adapted to each variable's distribution. Yield used 90/110 mean and 20 CV thresholds; GNDVI used 92/102 mean and 5 CV thresholds, reflecting the more compressed range of GNDVI values across the field.Both classifications agree the field is overwhelmingly medium-stable. However, the GNDVI map shows no low-stable pixels (zero) and concentrates high-stable areas in the central-eastern field, while the yield map identifies low-stable patches in the southwest, upper-north, and south-central areas. The GNDVI-based unstable pixels along the edges are likely satellite mixing artifacts rather than real instability. Overall, the remote-sensing analysis captured coarser field patterns but missed the finer-resolution low-yielding patches detected by yield monitor data. GNDVI is useful for early-season scouting, but yield monitor data remains more directly informative for management decisions.
+Both yield-based and GNDVI-based stability classifications were performed using the same logic as the yield stability classifications (mean and CV thresholds) but with thresholds adapted to each variable's distribution. Yield used 90/110 mean and 20 CV thresholds; GNDVI used 92/102 mean and 5 CV thresholds, reflecting the more compressed range of GNDVI values across the field. Both classifications agree the field is more medium-stable. However, the GNDVI map shows no low-stable pixels (zero) and concentrates high-stable areas in the central-eastern field, while the yield map identifies low-stable patches in the southwest, upper-north, and south-central areas. The GNDVI-based unstable pixels along the edges are likely satellite capturing issues rather than real instability. Overall, the remote-sensing analysis captured coarser field patterns but missed the finer-resolution low-yielding patches detected by yield monitor data. GNDVI is useful for early-season scouting, but yield monitor data remains more directly informative for management decisions.
 
 
 ## 23. **Extra credit** Tell me what was your most favorite part of this entire course. Explain in detail why.  
 
+I liked the fact that there is a final project. It was helpful in helping me revisit concepts that were taught earlier, especially those I did not quite understand. It was also helpful in helping me to know why we did certain things, remembering some functions and libraries from consistent use, and most importantly, thinking like a consultant, and practicing the art of decision making making, while considering the needs of the farmer (Mr McCormick). More like translating data into useful information that the farmer can relate with. I also enjoyed having to troubleshoot whenever I got an error from running my codes.
+
 ## 24. **Extra credit** Tell me what was your least favorite part of this entire course. Explain in detail why.  
 
+My least favorite part was occasionally feeling like I was missing the underlying precision agriculture theory behind what we were doing, particularly with yield stability mapping and yield monitor data. The brief introductory explanations at the start of each topic were really helpful, but I would have benefited from a deeper theoretical foundation before the hands-on analysis. I would say this isn't exactly a limitation of the course since it was clear it's an applied class. The gap was on my end, and I plan to take or read into a course covering precision ag fundamentals so I can link the techniques I learned here.
 
 # E. Submitting and deadline  
 All I need is the rendered version of **this script**. 
